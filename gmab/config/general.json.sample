@@ -1,0 +1,5 @@
+﻿{
+  "ssh_key_path": "~/.ssh/id_ed25519.pub",
+  "default_lifetime_minutes": 60,
+  "default_provider": "linode"
+}
