@@ -50,96 +50,6 @@ gmab configure
 # Configure a specific provider
 gmab configure -p linode
 ```
-
-Example configuration session:
-```bash
-$ gmab configure
-Using config directory: /home/user/.config/gmab
-
-Configuring general settings:
-SSH public key path [~/.ssh/id_ed25519.pub]: 
-Default instance lifetime (minutes) [60]: 
-Default provider (linode, aws, hetzner) [linode]: 
-
-Do you want to configure linode? [Y/n]: y
-
-Configuring linode provider:
-API Key: your-api-key-here
-Default region [nl-ams]: 
-Default instance type [g6-nanode-1]: 
-Default image [linode/ubuntu22.04]: 
-Default root password: your-root-password
-
-Do you want to configure aws? [Y/n]: y
-
-Configuring aws provider:
-Access Key: your-access-key
-Secret Key: your-secret-key
-Default region [eu-west-1]: 
-Default image [ami-12345678]: 
-Default instance type [t2.micro]: 
-
-Do you want to configure hetzner? [Y/n]: n
-
-Configuration completed successfully!
-```
-
-### Viewing Configuration
-
-You can view your current configuration using the `--print` flag:
-
-```bash
-gmab configure --print
-```
-
-This will display:
-- The location of your config files
-- The contents of your configuration (with sensitive data masked)
-- The current settings for all configured providers
-
-Example output:
-```
-General Configuration
-Location: /home/user/.config/gmab/config.json
-Contents:
-{
-  "ssh_key_path": "~/.ssh/id_ed25519.pub",
-  "default_lifetime_minutes": 60,
-  "default_provider": "linode"
-}
-
-Provider Configuration
-Location: /home/user/.config/gmab/providers.json
-Contents:
-{
-  "linode": {
-    "api_key": "********",
-    "default_region": "nl-ams",
-    "default_image": "linode/ubuntu22.04",
-    "default_type": "g6-nanode-1",
-    "default_root_pass": "********"
-  },
-  "aws": {
-    "access_key": "********",
-    "secret_key": "********",
-    "default_region": "eu-west-1",
-    "default_image": "ami-0574da719dca65348",
-    "default_type": "t2.micro"
-  }
-}
-```
-
-### Configuration Storage
-GMAB follows platform-specific standards for storing configuration:
-
-- Linux/macOS: `~/.config/gmab/` or `$XDG_CONFIG_HOME/gmab/`
-- Windows: `%APPDATA%\gmab\`
-- Override: Set `GMAB_CONFIG_DIR` environment variable
-
-Two main configuration files are used:
-1. `config.json` - General settings (SSH key, default lifetime, default provider)
-2. `providers.json` - Provider-specific credentials and defaults
-
 ## Usage
 
 ### Spawn a new instance
@@ -275,12 +185,97 @@ Successfully terminated 1 instance(s).
 $ gmab terminate expired
 No expired instances found.
 ```
-
-## Development
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## Additional Information
+
+### Example configuration session:
+```bash
+$ gmab configure
+Using config directory: /home/user/.config/gmab
+
+Configuring general settings:
+SSH public key path [~/.ssh/id_ed25519.pub]: 
+Default instance lifetime (minutes) [60]: 
+Default provider (linode, aws, hetzner) [linode]: 
+
+Do you want to configure linode? [Y/n]: y
+
+Configuring linode provider:
+API Key: your-api-key-here
+Default region [nl-ams]: 
+Default instance type [g6-nanode-1]: 
+Default image [linode/ubuntu22.04]: 
+Default root password: your-root-password
+
+Do you want to configure aws? [Y/n]: y
+
+Configuring aws provider:
+Access Key: your-access-key
+Secret Key: your-secret-key
+Default region [eu-west-1]: 
+Default image [ami-12345678]: 
+Default instance type [t2.micro]: 
+
+Do you want to configure hetzner? [Y/n]: n
+
+Configuration completed successfully!
+```
+
+### Viewing Configuration
+
+You can view your current configuration using the `--print` flag:
+
+```bash
+gmab configure --print
+```
+
+This will display:
+- The location of your config files
+- The contents of your configuration (with sensitive data masked)
+- The current settings for all configured providers
+
+Example output:
+```
+General Configuration
+Location: /home/user/.config/gmab/config.json
+Contents:
+{
+  "ssh_key_path": "~/.ssh/id_ed25519.pub",
+  "default_lifetime_minutes": 60,
+  "default_provider": "linode"
+}
+
+Provider Configuration
+Location: /home/user/.config/gmab/providers.json
+Contents:
+{
+  "linode": {
+    "api_key": "********",
+    "default_region": "nl-ams",
+    "default_image": "linode/ubuntu22.04",
+    "default_type": "g6-nanode-1",
+    "default_root_pass": "********"
+  },
+  "aws": {
+    "access_key": "********",
+    "secret_key": "********",
+    "default_region": "eu-west-1",
+    "default_image": "ami-0574da719dca65348",
+    "default_type": "t2.micro"
+  }
+}
+```
+
+### Configuration Storage
+GMAB follows platform-specific standards for storing configuration:
+
+- Linux/macOS: `~/.config/gmab/` or `$XDG_CONFIG_HOME/gmab/`
+- Windows: `%APPDATA%\gmab\`
+- Override: Set `GMAB_CONFIG_DIR` environment variable
+
+Two main configuration files are used:
+1. `config.json` - General settings (SSH key, default lifetime, default provider)
+2. `providers.json` - Provider-specific credentials and defaults
+
 
 ### AWS Resources Created
 When using AWS as a provider, GMAB automatically creates and manages the following resources:
