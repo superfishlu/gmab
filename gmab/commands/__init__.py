@@ -1,1 +1,5 @@
-﻿# This file marks gmab as a Python package.
+﻿# gmab/commands/__init__.py
+
+"""
+Command modules for GMAB CLI.
+"""

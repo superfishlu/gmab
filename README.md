@@ -1,6 +1,7 @@
-﻿# GMAB (Give Me A Box) 
+﻿# GMAB (Give Me A Box) v0.1.1
 
 A CLI tool to spawn, list, and manage temporary cloud boxes.
+
 #### Why?
 
 - Need a quick VPS for pentesting, bug bounty, or scanning?
@@ -19,25 +20,32 @@ A CLI tool to spawn, list, and manage temporary cloud boxes.
 
 ## Installation
 
-1. Clone the repository
+### Using pip
+
+The easiest way to install GMAB is directly from PyPI:
+
 ```bash
+pip install gmab
+```
+
+### From Source
+
+You can also install directly from the source code:
+
+```bash
+# Clone the repository
 git clone https://github.com/yourusername/gmab.git
 cd gmab
-```
 
-2. Create and activate a virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+# Install the package
+pip install .
 
-3. Install the package in editable mode
-```bash
+# For development (editable mode)
 pip install -e .
 ```
 
 ## Configuration
-Before you can use GMAB, you need to configure it with your provider credentials and preferences. GMAB provides several ways to manage your configuration:
+Before you can use GMAB, you need to configure it with your provider credentials and preferences. You must run the `configure` command before using any other functionality.
 
 ### Interactive Configuration
 
@@ -50,6 +58,22 @@ gmab configure
 # Configure a specific provider
 gmab configure -p linode
 ```
+
+> **Note:** GMAB will only use providers that you've explicitly configured. If you don't configure a provider, GMAB will not attempt to use it, preventing any unnecessary API calls or errors.
+
+### Viewing Configuration
+
+You can view your current configuration using the `--print` flag:
+
+```bash
+gmab configure --print
+```
+
+This will display:
+- The location of your config files
+- The contents of your configuration (with sensitive data masked)
+- The current settings for all configured providers
+
 ## Usage
 
 ### Spawn a new instance
@@ -124,10 +148,10 @@ gmab spawn -t 60  # 60 minutes lifetime
 
 # Set up automatic cleanup with cron (Linux/Mac)
 # Run every hour to clean up expired instances
-0 * * * * /path/to/venv/bin/gmab terminate expired -y
+0 * * * * gmab terminate expired -y
 
 # For Windows, use Task Scheduler to run:
-# C:\path\to\venv\Scripts\gmab.exe terminate expired -y
+# gmab.exe terminate expired -y
 ```
 
 3. **Regular Cleanup**: Periodically check and terminate expired instances
@@ -185,87 +209,8 @@ Successfully terminated 1 instance(s).
 $ gmab terminate expired
 No expired instances found.
 ```
-## Additional Information
 
-### Example configuration session:
-```bash
-$ gmab configure
-Using config directory: /home/user/.config/gmab
-
-Configuring general settings:
-SSH public key path [~/.ssh/id_ed25519.pub]: 
-Default instance lifetime (minutes) [60]: 
-Default provider (linode, aws, hetzner) [linode]: 
-
-Do you want to configure linode? [Y/n]: y
-
-Configuring linode provider:
-API Key: your-api-key-here
-Default region [nl-ams]: 
-Default instance type [g6-nanode-1]: 
-Default image [linode/ubuntu22.04]: 
-Default root password: your-root-password
-
-Do you want to configure aws? [Y/n]: y
-
-Configuring aws provider:
-Access Key: your-access-key
-Secret Key: your-secret-key
-Default region [eu-west-1]: 
-Default image [ami-12345678]: 
-Default instance type [t2.micro]: 
-
-Do you want to configure hetzner? [Y/n]: n
-
-Configuration completed successfully!
-```
-
-### Viewing Configuration
-
-You can view your current configuration using the `--print` flag:
-
-```bash
-gmab configure --print
-```
-
-This will display:
-- The location of your config files
-- The contents of your configuration (with sensitive data masked)
-- The current settings for all configured providers
-
-Example output:
-```
-General Configuration
-Location: /home/user/.config/gmab/config.json
-Contents:
-{
-  "ssh_key_path": "~/.ssh/id_ed25519.pub",
-  "default_lifetime_minutes": 60,
-  "default_provider": "linode"
-}
-
-Provider Configuration
-Location: /home/user/.config/gmab/providers.json
-Contents:
-{
-  "linode": {
-    "api_key": "********",
-    "default_region": "nl-ams",
-    "default_image": "linode/ubuntu22.04",
-    "default_type": "g6-nanode-1",
-    "default_root_pass": "********"
-  },
-  "aws": {
-    "access_key": "********",
-    "secret_key": "********",
-    "default_region": "eu-west-1",
-    "default_image": "ami-0574da719dca65348",
-    "default_type": "t2.micro"
-  }
-}
-```
-
-### Configuration Storage
+## Configuration Storage
 GMAB follows platform-specific standards for storing configuration:
 
 - Linux/macOS: `~/.config/gmab/` or `$XDG_CONFIG_HOME/gmab/`
@@ -334,3 +279,44 @@ For these reasons, when using GMAB with AWS we recommend:
 - Be patient as instance creation takes longer than other providers
 
 If you're just getting started with GMAB, we recommend beginning with Linode or Hetzner for the simplest experience.
+
+## Example configuration session:
+```bash
+$ gmab configure
+Using config directory: /home/user/.config/gmab
+
+Configuring general settings:
+SSH public key path [~/.ssh/id_ed25519.pub]: 
+Default instance lifetime (minutes) [60]: 
+Default provider (linode, aws, hetzner) [linode]: 
+
+Do you want to configure linode? [Y/n]: y
+
+Configuring linode provider:
+API Key: your-api-key-here
+Default region [nl-ams]: 
+Default instance type [g6-nanode-1]: 
+Default image [linode/ubuntu22.04]: 
+Default root password: your-root-password
+
+Do you want to configure aws? [Y/n]: y
+
+Configuring aws provider:
+Access Key: your-access-key
+Secret Key: your-secret-key
+Default region [eu-west-1]: 
+Default image [ami-12345678]: 
+Default instance type [t2.micro]: 
+
+Do you want to configure hetzner? [Y/n]: n
+
+Configuration completed successfully!
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

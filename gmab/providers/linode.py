@@ -17,6 +17,23 @@ class LinodeProvider(ProviderBase):
     """
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
+        """
+        Create a new Linode instance.
+        
+        Args:
+            image (str, optional): The Linode image to use
+            region (str, optional): The region to create the instance in
+            ssh_key_path (str, optional): Path to the SSH public key to use
+            lifetime_minutes (int, optional): Lifetime of the instance in minutes
+            
+        Returns:
+            dict: Instance information including ID, IP, etc.
+            
+        Raises:
+            ValueError: If API key is missing or other validation fails
+            FileNotFoundError: If SSH key file doesn't exist
+            Exception: For API errors or other failures
+        """
         token = self.provider_cfg.get("api_key")
         if not token:
             raise ValueError("Linode API key not found in config.")
@@ -72,30 +89,47 @@ class LinodeProvider(ProviderBase):
             ]
         }
 
-        resp = requests.post(
-            "https://api.linode.com/v4/linode/instances",
-            headers=headers,
-            json=data
-        )
-        if resp.status_code not in (200, 202):
-            raise Exception(f"Linode creation failed: {resp.text}")
+        try:
+            resp = requests.post(
+                "https://api.linode.com/v4/linode/instances",
+                headers=headers,
+                json=data,
+                timeout=30  # Added timeout for better error handling
+            )
+            
+            if resp.status_code not in (200, 202):
+                raise Exception(f"Linode creation failed: {resp.text}")
 
-        instance_data = resp.json()
-        ip_address = instance_data["ipv4"][0] if instance_data["ipv4"] else "No IP Assigned"
-        return {
-            "provider": self.provider_name,
-            "instance_id": str(instance_data["id"]),
-            "ip": ip_address,
-            "label": random_name,
-            "status": instance_data["status"],
-            "region": region,
-            "image": image,
-            "creation_time": creation_time,
-            "lifetime_minutes": lifetime_minutes
-        }
+            instance_data = resp.json()
+            ip_address = instance_data["ipv4"][0] if instance_data["ipv4"] else "No IP Assigned"
+            
+            return {
+                "provider": self.provider_name,
+                "instance_id": str(instance_data["id"]),
+                "ip": ip_address,
+                "label": random_name,
+                "status": instance_data["status"],
+                "region": region,
+                "image": image,
+                "creation_time": creation_time,
+                "lifetime_minutes": lifetime_minutes
+            }
+            
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Network error when creating Linode: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to create Linode instance: {str(e)}")
 
     def get_instance_id_by_label(self, label):
-        """Find the Linode instance ID by its label, but only for instances with the 'gmab' tag."""
+        """
+        Find the Linode instance ID by its label, but only for instances with the 'gmab' tag.
+        
+        Args:
+            label (str): The instance label to search for
+            
+        Returns:
+            str or None: The instance ID if found, None otherwise
+        """
         instances = self.list_instances()
         for instance in instances:
             if instance["label"] == label:
@@ -104,11 +138,18 @@ class LinodeProvider(ProviderBase):
 
     def terminate_instance(self, instance_identifier):
         """
-        Terminate a Linode instance. The identifier can be either:
-        - A numeric instance ID (e.g., "71864564")
-        - A label (e.g., "gmab-3ul7u0p1x9ns")
+        Terminate a Linode instance by ID or label.
+        
+        Args:
+            instance_identifier (str): A numeric instance ID or label (e.g., "gmab-3ul7u0p1x9ns")
+            
+        Raises:
+            Exception: If the instance cannot be found or deleted
         """
         token = self.provider_cfg.get("api_key")
+        if not token:
+            raise ValueError("Linode API key not found in config.")
+            
         headers = {"Authorization": f"Bearer {token}"}
 
         if not instance_identifier.isdigit():
@@ -118,16 +159,31 @@ class LinodeProvider(ProviderBase):
         else:
             instance_id = instance_identifier
 
-        resp = requests.delete(
-            f"https://api.linode.com/v4/linode/instances/{instance_id}",
-            headers=headers
-        )
+        try:
+            resp = requests.delete(
+                f"https://api.linode.com/v4/linode/instances/{instance_id}",
+                headers=headers,
+                timeout=30  # Added timeout for better error handling
+            )
 
-        if resp.status_code not in (200, 204):
-            raise Exception(f"Linode deletion failed: {resp.text}")
+            if resp.status_code not in (200, 204):
+                raise Exception(f"Linode deletion failed: {resp.text}")
+                
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Network error when terminating Linode: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to terminate Linode instance: {str(e)}")
 
     def _get_instance_expiry_info(self, tags):
-        """Helper method to get expiry information from instance tags."""
+        """
+        Helper method to get expiry information from instance tags.
+        
+        Args:
+            tags (list): List of tags from the Linode instance
+            
+        Returns:
+            tuple: (creation_time, lifetime_minutes, is_expired)
+        """
         creation_time = 0
         lifetime_minutes = 60
         
@@ -142,41 +198,67 @@ class LinodeProvider(ProviderBase):
         return creation_time, lifetime_minutes, is_expired
 
     def list_instances(self):
-        """Retrieve all active Linode instances that have the 'gmab' tag."""
+        """
+        Retrieve all active Linode instances that have the 'gmab' tag.
+        
+        Returns:
+            list: List of instance dictionaries
+            
+        Raises:
+            Exception: If listing instances fails
+        """
         token = self.provider_cfg.get("api_key")
+        if not token:
+            raise ValueError("Linode API key not found in config.")
+            
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = requests.get("https://api.linode.com/v4/linode/instances", headers=headers)
-        
-        if response.status_code != 200:
-            raise Exception(f"Failed to list Linodes: {response.text}")
+        try:
+            response = requests.get(
+                "https://api.linode.com/v4/linode/instances", 
+                headers=headers,
+                timeout=30  # Added timeout for better error handling
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Failed to list Linodes: {response.text}")
 
-        instances = response.json()["data"]
-        result = []
+            instances = response.json()["data"]
+            result = []
 
-        for instance in instances:
-            if "gmab" in instance.get("tags", []):
-                creation_time, lifetime_minutes, is_expired = self._get_instance_expiry_info(instance.get("tags", []))
-                
-                # Modify status to include expiry information
-                base_status = instance["status"]
-                status = f"{base_status} (expired)" if is_expired else base_status
+            for instance in instances:
+                if "gmab" in instance.get("tags", []):
+                    creation_time, lifetime_minutes, is_expired = self._get_instance_expiry_info(instance.get("tags", []))
+                    
+                    # Modify status to include expiry information
+                    base_status = instance["status"]
+                    status = f"{base_status} (expired)" if is_expired else base_status
 
-                result.append({
-                    "provider": self.provider_name,
-                    "instance_id": str(instance["id"]),
-                    "label": instance["label"],
-                    "ip": instance["ipv4"][0] if instance["ipv4"] else "No IP Assigned",
-                    "status": status,
-                    "region": instance.get("region", "Unknown"),
-                    "image": instance.get("image", "Unknown"),
-                    "creation_time": creation_time,
-                    "lifetime_minutes": lifetime_minutes,
-                    "is_expired": is_expired
-                })
+                    result.append({
+                        "provider": self.provider_name,
+                        "instance_id": str(instance["id"]),
+                        "label": instance["label"],
+                        "ip": instance["ipv4"][0] if instance["ipv4"] else "No IP Assigned",
+                        "status": status,
+                        "region": instance.get("region", "Unknown"),
+                        "image": instance.get("image", "Unknown"),
+                        "creation_time": creation_time,
+                        "lifetime_minutes": lifetime_minutes,
+                        "is_expired": is_expired
+                    })
 
-        return result
+            return result
+            
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Network error when listing Linodes: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to list Linode instances: {str(e)}")
 
     def list_expired_instances(self):
-        """List all expired instances."""
+        """
+        List all expired instances.
+        
+        Returns:
+            list: List of expired instance dictionaries
+        """
         return [inst for inst in self.list_instances() if inst['is_expired']]

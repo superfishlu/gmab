@@ -1,6 +1,7 @@
 ﻿# gmab/utils/config_loader.py
 
 import json
+import os
 from pathlib import Path
 from gmab.utils.paths import get_config_file_path, ensure_config_dir_exists
 
@@ -34,10 +35,23 @@ DEFAULT_PROVIDERS_CONFIG = {
     }
 }
 
-def load_config(filename):
+class ConfigNotFoundError(Exception):
+    """Exception raised when a config file does not exist and should not be auto-created."""
+    pass
+
+def load_config(filename, create_if_missing=False):
     """
     Load configuration from the appropriate config directory.
-    Creates default config if none exists.
+    
+    Args:
+        filename (str): The configuration file to load
+        create_if_missing (bool): Whether to create a default config if none exists
+    
+    Returns:
+        dict: The loaded configuration
+        
+    Raises:
+        ConfigNotFoundError: If the config doesn't exist and create_if_missing=False
     """
     # Handle both old-style paths and new config names
     if filename.startswith('gmab/config/'):
@@ -52,8 +66,16 @@ def load_config(filename):
     actual_filename = filename_map.get(filename, filename)
     config_path = get_config_file_path(actual_filename)
 
-    # Create default config if it doesn't exist
+    # Check if config exists
     if not config_path.exists():
+        # If it doesn't exist and we shouldn't create it, raise an error
+        if not create_if_missing:
+            raise ConfigNotFoundError(
+                f"Configuration file {actual_filename} not found. "
+                "Please run 'gmab configure' to set up your configuration."
+            )
+        
+        # Otherwise create default config
         default_content = (DEFAULT_GENERAL_CONFIG if actual_filename == 'config.json' 
                          else DEFAULT_PROVIDERS_CONFIG)
         ensure_config_dir_exists()
@@ -63,6 +85,24 @@ def load_config(filename):
     try:
         with open(config_path, 'r', encoding='utf-8-sig') as f:
             return json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Error parsing config file {config_path}: {str(e)}")
     except Exception as e:
-        print(f"Error loading config from {config_path}: {str(e)}")
-        return {}
+        raise Exception(f"Error loading config from {config_path}: {str(e)}")
+
+def config_exists():
+    """Check if the basic configuration files exist.
+    
+    Returns:
+        bool: True if both config.json and providers.json exist
+    """
+    config_path = get_config_file_path('config.json')
+    providers_path = get_config_file_path('providers.json')
+    return config_path.exists() and providers_path.exists()
+
+def save_config(config, filename):
+    """Save configuration to file."""
+    config_path = get_config_file_path(filename)
+    ensure_config_dir_exists()
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2)

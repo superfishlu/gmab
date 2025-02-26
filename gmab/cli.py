@@ -5,7 +5,23 @@ from gmab.commands.spawn import spawn_box
 from gmab.commands.terminate import terminate_box
 from gmab.commands.list import list_boxes
 from gmab.commands.configure import run_configure, print_configs
-from gmab.utils.config_loader import DEFAULT_PROVIDERS_CONFIG
+from gmab.utils.config_loader import DEFAULT_PROVIDERS_CONFIG, config_exists, ConfigNotFoundError, load_config
+
+def check_config_exists():
+    """Check if config exists and show an error message if it doesn't."""
+    if not config_exists():
+        click.echo("Error: GMAB is not configured.")
+        click.echo("Please run 'gmab configure' to set up your configuration.")
+        return False
+    return True
+
+def get_configured_providers():
+    """Get a list of providers that have been explicitly configured."""
+    try:
+        providers_config = load_config("providers.json")
+        return list(providers_config.keys())
+    except (ConfigNotFoundError, Exception):
+        return []
 
 @click.group()
 def cli():
@@ -19,7 +35,20 @@ def cli():
 @click.option('--lifetime', '-t', type=int, default=None, help='Lifetime in minutes (default: 60).')
 def spawn(provider, region, image, lifetime):
     """ Spawn a new instance. """
-    spawn_box(provider, region, image, lifetime)
+    if not check_config_exists():
+        return
+    try:
+        if provider and provider not in get_configured_providers():
+            click.echo(f"Error: Provider '{provider}' is not configured.")
+            click.echo(f"Please run 'gmab configure -p {provider}' to configure this provider.")
+            return
+            
+        spawn_box(provider, region, image, lifetime)
+    except ConfigNotFoundError:
+        click.echo("Error: GMAB is not configured.")
+        click.echo("Please run 'gmab configure' to set up your configuration.")
+    except Exception as e:
+        click.echo(f"Error: {str(e)}")
 
 @cli.command()
 @click.argument('instance_ids', nargs=-1)
@@ -30,7 +59,15 @@ def terminate(instance_ids, provider, yes):
     
     Use 'all' to terminate all instances, or 'expired' to terminate expired instances.
     """
+    if not check_config_exists():
+        return
+    
     try:
+        if provider and provider not in get_configured_providers():
+            click.echo(f"Error: Provider '{provider}' is not configured.")
+            click.echo(f"Please run 'gmab configure -p {provider}' to configure this provider.")
+            return
+            
         # Handle 'expired' command
         if len(instance_ids) == 1 and instance_ids[0] == 'expired':
             # Get all instances
@@ -147,75 +184,92 @@ def terminate(instance_ids, provider, yes):
             for instance_id, error in failed_instances:
                 click.echo(f"- {instance_id}: {error}")
 
+    except ConfigNotFoundError:
+        click.echo("Error: GMAB is not configured.")
+        click.echo("Please run 'gmab configure' to set up your configuration.")
     except Exception as e:
         click.echo(f"Error: {str(e)}")
 
 @cli.command(name='list')  # Explicitly name the command
 @click.option('--provider', '-p', 
-              type=click.Choice(['all'] + list(DEFAULT_PROVIDERS_CONFIG.keys())),  # Add choice validation
-              default=None, 
               help='Provider name (list all providers if not specified).')
 def list_command(provider):  # Renamed from 'list' to avoid conflicts
     """ List active instances. """
-    instances = list_boxes(provider)
-
-    if not instances or len(instances) == 0:
-        click.echo("No active instances found.")
+    if not check_config_exists():
         return
+    
+    try:
+        # Check if provider is configured
+        if provider and provider not in get_configured_providers():
+            click.echo(f"Error: Provider '{provider}' is not configured.")
+            click.echo(f"Please run 'gmab configure -p {provider}' to configure this provider.")
+            return
+            
+        instances = list_boxes(provider)
 
-    # Updated column widths
-    columns = {
-        'Provider': 10,
-        'Instance ID': 22,
-        'Label': 20,
-        'IP Address': 18,
-        'Status': 20,  # Increased to accommodate "(expired)" suffix
-        'Region': 15,
-        'Image': 25,
-        'Time Left': 15  # Changed from 'Lifetime' to 'Time Left'
-    }
+        if not instances or len(instances) == 0:
+            click.echo("No active instances found.")
+            return
 
-    # Print header
-    header = (
-        f"{'Provider':<{columns['Provider']}} "
-        f"{'Instance ID':<{columns['Instance ID']}} "
-        f"{'Label':<{columns['Label']}} "
-        f"{'IP Address':<{columns['IP Address']}} "
-        f"{'Status':<{columns['Status']}} "
-        f"{'Region':<{columns['Region']}} "
-        f"{'Image':<{columns['Image']}} "
-        f"{'Time Left':<{columns['Time Left']}}"
-    )
-    click.echo(header)
-    click.echo("=" * (sum(columns.values()) + len(columns) - 1))
+        # Updated column widths
+        columns = {
+            'Provider': 10,
+            'Instance ID': 22,
+            'Label': 20,
+            'IP Address': 18,
+            'Status': 20,  # Increased to accommodate "(expired)" suffix
+            'Region': 15,
+            'Image': 25,
+            'Time Left': 15  # Changed from 'Lifetime' to 'Time Left'
+        }
 
-    for instance in instances:
-        # Add safety checks for required fields
-        provider = instance.get('provider', 'Unknown')
-        instance_id = instance.get('instance_id', 'Unknown')
-        label = instance.get('label', 'Unknown')
-        ip = instance.get('ip', 'No IP')
-        status = instance.get('status', 'Unknown')
-        region = instance.get('region', 'Unknown')
-        image = instance.get('image', 'Unknown')
-        
-        # Format lifetime left
-        lifetime_left = instance.get('lifetime_left', 0)
-        if lifetime_left < 1:
-            time_left = "expired"
-        else:
-            time_left = f"{int(lifetime_left)}m"
-
-        click.echo(
-            f"{provider:<{columns['Provider']}} "
-            f"{instance_id:<{columns['Instance ID']}} "
-            f"{label:<{columns['Label']}} "
-            f"{ip:<{columns['IP Address']}} "
-            f"{status:<{columns['Status']}} "
-            f"{region:<{columns['Region']}} "
-            f"{image:<{columns['Image']}} "
-            f"{time_left:<{columns['Time Left']}}"
+        # Print header
+        header = (
+            f"{'Provider':<{columns['Provider']}} "
+            f"{'Instance ID':<{columns['Instance ID']}} "
+            f"{'Label':<{columns['Label']}} "
+            f"{'IP Address':<{columns['IP Address']}} "
+            f"{'Status':<{columns['Status']}} "
+            f"{'Region':<{columns['Region']}} "
+            f"{'Image':<{columns['Image']}} "
+            f"{'Time Left':<{columns['Time Left']}}"
         )
+        click.echo(header)
+        click.echo("=" * (sum(columns.values()) + len(columns) - 1))
+
+        for instance in instances:
+            # Add safety checks for required fields
+            provider = instance.get('provider', 'Unknown')
+            instance_id = instance.get('instance_id', 'Unknown')
+            label = instance.get('label', 'Unknown')
+            ip = instance.get('ip', 'No IP')
+            status = instance.get('status', 'Unknown')
+            region = instance.get('region', 'Unknown')
+            image = instance.get('image', 'Unknown')
+            
+            # Format lifetime left
+            lifetime_left = instance.get('lifetime_left', 0)
+            if lifetime_left < 1:
+                time_left = "expired"
+            else:
+                time_left = f"{int(lifetime_left)}m"
+
+            click.echo(
+                f"{provider:<{columns['Provider']}} "
+                f"{instance_id:<{columns['Instance ID']}} "
+                f"{label:<{columns['Label']}} "
+                f"{ip:<{columns['IP Address']}} "
+                f"{status:<{columns['Status']}} "
+                f"{region:<{columns['Region']}} "
+                f"{image:<{columns['Image']}} "
+                f"{time_left:<{columns['Time Left']}}"
+            )
+
+    except ConfigNotFoundError:
+        click.echo("Error: GMAB is not configured.")
+        click.echo("Please run 'gmab configure' to set up your configuration.")
+    except Exception as e:
+        click.echo(f"Error: {str(e)}")
 
 @cli.command()
 @click.option(

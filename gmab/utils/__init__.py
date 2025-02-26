@@ -1,1 +1,5 @@
-﻿# This file marks gmab as a Python package.
+﻿# gmab/utils/__init__.py
+
+"""
+Utility modules for GMAB.
+"""

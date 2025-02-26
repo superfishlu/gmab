@@ -4,7 +4,10 @@ import click
 from pathlib import Path
 import json
 from gmab.utils.paths import get_config_file_path, ensure_config_dir_exists
-from gmab.utils.config_loader import load_config, DEFAULT_GENERAL_CONFIG, DEFAULT_PROVIDERS_CONFIG
+from gmab.utils.config_loader import (
+    load_config, save_config, DEFAULT_GENERAL_CONFIG, 
+    DEFAULT_PROVIDERS_CONFIG, ConfigNotFoundError
+)
 
 def update_nested_dict(original, updates):
     """Recursively update a nested dictionary without overwriting unspecified values."""
@@ -14,12 +17,6 @@ def update_nested_dict(original, updates):
         elif value is not None:  # Only update if value is not None
             original[key] = value
     return original
-
-def save_config(config, filename):
-    """Save configuration to file."""
-    config_path = get_config_file_path(filename)
-    with open(config_path, 'w', encoding='utf-8') as f:
-        json.dump(config, f, indent=2)
 
 def print_configs():
     """Print the current configuration files and their contents."""
@@ -69,11 +66,16 @@ def configure_general(current_config):
         type=int
     )
     
-    providers = list(DEFAULT_PROVIDERS_CONFIG.keys())
+    # Only show providers that have been configured
+    available_providers = list(DEFAULT_PROVIDERS_CONFIG.keys())
+    
+    # In case we're updating an existing config, get the current provider
+    current_provider = current_config.get('default_provider', DEFAULT_GENERAL_CONFIG['default_provider'])
+    
     default_provider = click.prompt(
         "Default provider",
-        default=current_config.get('default_provider', DEFAULT_GENERAL_CONFIG['default_provider']),
-        type=click.Choice(providers, case_sensitive=False)
+        default=current_provider,
+        type=click.Choice(available_providers, case_sensitive=False)
     )
     
     return {
@@ -166,23 +168,29 @@ def configure_provider(provider_name, current_config):
 
 def validate_configs():
     """Perform basic validation of the configuration files."""
-    general_config = load_config('config.json')
-    providers_config = load_config('providers.json')
-    
-    # Check if SSH key exists
-    ssh_key_path = Path(general_config.get('ssh_key_path', '')).expanduser()
-    if not ssh_key_path.exists():
-        click.echo(f"\nWarning: SSH key not found at {ssh_key_path}")
-    
-    # Check if default provider is configured
-    default_provider = general_config.get('default_provider')
-    if default_provider:
-        provider_config = providers_config.get(default_provider, {})
-        if default_provider == 'aws':
-            if not provider_config.get('access_key') or not provider_config.get('secret_key'):
-                click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing AWS credentials)")
-        elif not provider_config.get('api_key'):
-            click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing API key)")
+    try:
+        general_config = load_config('config.json')
+        providers_config = load_config('providers.json')
+        
+        # Check if SSH key exists
+        ssh_key_path = Path(general_config.get('ssh_key_path', '')).expanduser()
+        if not ssh_key_path.exists():
+            click.echo(f"\nWarning: SSH key not found at {ssh_key_path}")
+        
+        # Check if default provider is configured
+        default_provider = general_config.get('default_provider')
+        if default_provider:
+            if default_provider not in providers_config:
+                click.echo(f"\nWarning: Default provider '{default_provider}' is not configured")
+            else:
+                provider_config = providers_config.get(default_provider, {})
+                if default_provider == 'aws':
+                    if not provider_config.get('access_key') or not provider_config.get('secret_key'):
+                        click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing AWS credentials)")
+                elif not provider_config.get('api_key'):
+                    click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing API key)")
+    except Exception as e:
+        click.echo(f"\nWarning: Could not validate configurations: {str(e)}")
 
 def run_configure(provider):
     """Main configure function to be called from CLI."""
@@ -190,9 +198,16 @@ def run_configure(provider):
     config_dir = ensure_config_dir_exists()
     click.echo(f"Using config directory: {config_dir}")
     
-    # Load existing configs or create new ones
-    general_config = load_config('config.json')
-    providers_config = load_config('providers.json')
+    # Load existing configs or create new empty ones
+    try:
+        general_config = load_config('config.json')
+    except ConfigNotFoundError:
+        general_config = {}
+    
+    try:
+        providers_config = load_config('providers.json')
+    except ConfigNotFoundError:
+        providers_config = {}
     
     if provider == 'all':
         # Configure general settings
@@ -200,20 +215,21 @@ def run_configure(provider):
         save_config(new_general_config, 'config.json')
         
         # Configure each provider
-        new_providers_config = {}
         for prov in DEFAULT_PROVIDERS_CONFIG.keys():
             if click.confirm(f"\nDo you want to configure {prov}?", default=True):
-                new_providers_config[prov] = configure_provider(prov, providers_config)
+                providers_config[prov] = configure_provider(prov, providers_config)
         
-        # Update providers config while preserving existing values
-        updated_providers_config = update_nested_dict(providers_config, new_providers_config)
-        save_config(updated_providers_config, 'providers.json')
+        save_config(providers_config, 'providers.json')
     
     else:
+        # If no general config exists, configure it first
+        if not general_config:
+            new_general_config = configure_general({})
+            save_config(new_general_config, 'config.json')
+        
         # Configure only the specified provider
-        new_provider_config = {provider: configure_provider(provider, providers_config)}
-        updated_providers_config = update_nested_dict(providers_config, new_provider_config)
-        save_config(updated_providers_config, 'providers.json')
+        providers_config[provider] = configure_provider(provider, providers_config)
+        save_config(providers_config, 'providers.json')
     
     # Validate the final configuration
     validate_configs()

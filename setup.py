@@ -11,13 +11,13 @@ requirements = read_requirements('requirements.txt')
 
 setup(
     name="gmab",
-    version="0.1.0",
+    version="0.1.1",  # Updated version number to 0.1.1
     description="Give Me A Box - CLI tool to spawn, list, and manage temporary cloud boxes",
     long_description=Path("README.md").read_text(),
     long_description_content_type="text/markdown",
-    author="Your Name",  # Add your name
-    author_email="your.email@example.com",  # Add your email
-    url="https://github.com/yourusername/gmab",  # Add your repo URL
+    author="superfish",  # Add your name
+    author_email="superfishlu@gmail.com",  # Add your email
+    url="https://github.com/superfishlu/gmab",  # Add your repo URL
     packages=find_packages(),
     install_requires=requirements,
     entry_points={
