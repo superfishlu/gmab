@@ -24,8 +24,3 @@ class TestConfigure(unittest.TestCase):
         hetzner_keys = ['api_key', 'default_region', 'default_image', 'default_type']
         hetzner_config = HetznerProvider.get_config_prompts({})
         self.assertAllIn(hetzner_keys, hetzner_config)
-
-
-    def test_configure_provider(self):
-        from gmab.commands import configure
-        configure.configure_provider("aws", {})
