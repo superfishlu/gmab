@@ -6,7 +6,6 @@ import functools
 import random
 import string
 import time
-from abc import abstractmethod
 from pathlib import Path
 from gmab.providers.base import ProviderBase
 
@@ -30,7 +29,6 @@ class AWSProvider(ProviderBase):
         self.ec2_resource = self.session.resource('ec2')
 
     @staticmethod
-    @abstractmethod
     def get_default_config():
         return {
             "access_key": "",
@@ -41,7 +39,6 @@ class AWSProvider(ProviderBase):
         }
 
     @staticmethod
-    @abstractmethod
     def get_config_prompts(provider_config):
         config = {}
         config['access_key'] = functools.partial(click.prompt,

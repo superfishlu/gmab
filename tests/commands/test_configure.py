@@ -24,3 +24,9 @@ class TestConfigure(unittest.TestCase):
         hetzner_keys = ['api_key', 'default_region', 'default_image', 'default_type']
         hetzner_config = HetznerProvider.get_config_prompts({})
         self.assertAllIn(hetzner_keys, hetzner_config)
+
+
+    def test_provider_configurations(self):
+        aws_provider = AWSProvider({})
+        linode_provider = LinodeProvider({})
+        hetzner_provider = HetznerProvider({"api_key": "yes"})

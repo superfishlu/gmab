@@ -6,7 +6,6 @@ import requests
 import random
 import string
 import time
-from abc import abstractmethod
 from pathlib import Path
 from gmab.providers.base import ProviderBase
 
@@ -113,7 +112,6 @@ class HetznerProvider(ProviderBase):
             raise Exception(f"Failed to get or create SSH key: {str(e)}")
         
     @staticmethod
-    @abstractmethod
     def get_default_config():
         return {
             "api_key": "",
@@ -123,7 +121,6 @@ class HetznerProvider(ProviderBase):
         }
     
     @staticmethod
-    @abstractmethod
     def get_config_prompts(provider_config):
         config = {}
         config['api_key'] = functools.partial(click.prompt,
