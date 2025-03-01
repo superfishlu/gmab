@@ -21,6 +21,10 @@ class ProviderBase(ABC):
         """
         self.provider_cfg = provider_cfg
         self.provider_name = None  # Will be set by the factory
+    
+    @staticmethod
+    def get_config_prompts():
+        return []
 
     @abstractmethod
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
