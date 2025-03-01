@@ -1,9 +1,12 @@
 # gmab/providers/hetzner.py
 
+import click
+import functools
 import requests
 import random
 import string
 import time
+from abc import abstractmethod
 from pathlib import Path
 from gmab.providers.base import ProviderBase
 
@@ -108,6 +111,39 @@ class HetznerProvider(ProviderBase):
             raise Exception(f"Network error when managing SSH keys: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to get or create SSH key: {str(e)}")
+        
+    @staticmethod
+    @abstractmethod
+    def get_default_config():
+        return {
+            "api_key": "",
+            "default_region": "nbg1",
+            "default_image": "ubuntu-22.04",
+            "default_type": "cpx11"
+        }
+    
+    @staticmethod
+    @abstractmethod
+    def get_config_prompts(provider_config):
+        config = {}
+        config['api_key'] = functools.partial(click.prompt,
+            "API Key",
+            default=provider_config.get('api_key', ''),
+            hide_input=False
+        )
+        config['default_region'] = functools.partial(click.prompt,
+            "Default region",
+            default=provider_config.get('default_region', HetznerProvider.get_default_config()['default_region'])
+        )
+        config['default_image'] = functools.partial(click.prompt,
+            "Default image",
+            default=provider_config.get('default_image', HetznerProvider.get_default_config()['default_image'])
+        )
+        config['default_type'] = functools.partial(click.prompt,
+            "Default instance type",
+            default=provider_config.get('default_type', HetznerProvider.get_default_config()['default_type'])
+        )
+        return config
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
         """

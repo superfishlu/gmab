@@ -23,7 +23,13 @@ class ProviderBase(ABC):
         self.provider_name = None  # Will be set by the factory
     
     @staticmethod
-    def get_config_prompts():
+    @abstractmethod
+    def get_default_config():
+        return 
+
+    @staticmethod
+    @abstractmethod
+    def get_config_prompts(provider_config):
         return []
 
     @abstractmethod
