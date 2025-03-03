@@ -1,4 +1,4 @@
-﻿# GMAB (Give Me A Box) v0.1.1
+﻿# GMAB (Give Me A Box) v0.1.2
 
 A CLI tool to spawn, list, and manage temporary cloud boxes.
 
