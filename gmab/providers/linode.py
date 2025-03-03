@@ -1,5 +1,7 @@
 ﻿# gmab/providers/linode.py
 
+import click
+import functools
 import requests
 import random
 import string
@@ -15,6 +17,43 @@ class LinodeProvider(ProviderBase):
     """
     Provider implementation for Linode.
     """
+
+    @staticmethod
+    def get_default_config():
+        return {
+            "api_key": "",
+            "default_region": "nl-ams",
+            "default_image": "linode/ubuntu22.04",
+            "default_type": "g6-nanode-1",
+            "default_root_pass": ""
+        }
+
+    @staticmethod
+    def get_config_prompts(provider_config):
+        config = {}
+        config['api_key'] = functools.partial(click.prompt,
+            "API Key",
+            default=provider_config.get('api_key', ''),
+            hide_input=False
+        )
+        config['default_region'] = functools.partial(click.prompt,
+            "Default region",
+            default=provider_config.get('default_region', LinodeProvider.get_default_config()['default_region'])
+        )
+        config['default_image'] = functools.partial(click.prompt,
+            "Default image",
+            default=provider_config.get('default_image', LinodeProvider.get_default_config()['default_image'])
+        )
+        config['default_type'] = functools.partial(click.prompt,
+            "Default instance type",
+            default=provider_config.get('default_type', LinodeProvider.get_default_config()['default_type'])
+        )
+        config['default_root_pass'] = functools.partial(click.prompt,
+            "Default root password",
+            default=provider_config.get('default_root_pass', ''),
+            hide_input=False
+        )
+        return config
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
         """

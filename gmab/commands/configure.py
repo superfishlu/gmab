@@ -8,6 +8,7 @@ from gmab.utils.config_loader import (
     load_config, save_config, DEFAULT_GENERAL_CONFIG, 
     DEFAULT_PROVIDERS_CONFIG, ConfigNotFoundError
 )
+from gmab import providers
 
 def update_nested_dict(original, updates):
     """Recursively update a nested dictionary without overwriting unspecified values."""
@@ -89,82 +90,19 @@ def configure_provider(provider_name, current_config):
     click.echo(f"\nConfiguring {provider_name} provider:")
     
     provider_config = current_config.get(provider_name, {})
-    default_config = DEFAULT_PROVIDERS_CONFIG[provider_name]
+    config = None
     
-    # Provider-specific configuration
-    if provider_name == "aws":
-        # AWS configuration in exact order from providers.json.sample
-        config = {}
-        config['access_key'] = click.prompt(
-            "Access Key",
-            default=provider_config.get('access_key', ''),
-            hide_input=False
-        )
-        config['secret_key'] = click.prompt(
-            "Secret Key",
-            default=provider_config.get('secret_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = click.prompt(
-            "Default region",
-            default=provider_config.get('default_region', default_config['default_region'])
-        )
-        config['default_image'] = click.prompt(
-            "Default image",
-            default=provider_config.get('default_image', default_config['default_image'])
-        )
-        config['default_type'] = click.prompt(
-            "Default instance type",
-            default=provider_config.get('default_type', default_config['default_type'])
-        )
-        return config
-
-    elif provider_name == "linode":
-        config = {}
-        config['api_key'] = click.prompt(
-            "API Key",
-            default=provider_config.get('api_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = click.prompt(
-            "Default region",
-            default=provider_config.get('default_region', default_config['default_region'])
-        )
-        config['default_image'] = click.prompt(
-            "Default image",
-            default=provider_config.get('default_image', default_config['default_image'])
-        )
-        config['default_type'] = click.prompt(
-            "Default instance type",
-            default=provider_config.get('default_type', default_config['default_type'])
-        )
-        config['default_root_pass'] = click.prompt(
-            "Default root password",
-            default=provider_config.get('default_root_pass', ''),
-            hide_input=False
-        )
-        return config
-
-    elif provider_name == "hetzner":
-        config = {}
-        config['api_key'] = click.prompt(
-            "API Key",
-            default=provider_config.get('api_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = click.prompt(
-            "Default region",
-            default=provider_config.get('default_region', default_config['default_region'])
-        )
-        config['default_image'] = click.prompt(
-            "Default image",
-            default=provider_config.get('default_image', default_config['default_image'])
-        )
-        config['default_type'] = click.prompt(
-            "Default instance type",
-            default=provider_config.get('default_type', default_config['default_type'])
-        )
-        return config
+    # Iterate each class in gmab/providers to get their prompts
+    for name, cls in providers.__dict__.items():
+        if name.lower() == provider_name.lower() + "provider":
+            config = cls.get_config_prompts(provider_config)
+    
+    # Execute the prompts
+    for key in config.keys():
+        config[key] = config[key]()
+    
+    return config
+        
 
 def validate_configs():
     """Perform basic validation of the configuration files."""
@@ -183,6 +121,7 @@ def validate_configs():
             if default_provider not in providers_config:
                 click.echo(f"\nWarning: Default provider '{default_provider}' is not configured")
             else:
+                # TODO: This should be done in a validate() function inside the provider
                 provider_config = providers_config.get(default_provider, {})
                 if default_provider == 'aws':
                     if not provider_config.get('access_key') or not provider_config.get('secret_key'):

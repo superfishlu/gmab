@@ -1,6 +1,8 @@
 # gmab/providers/aws.py
 
 import boto3
+import click
+import functools
 import random
 import string
 import time
@@ -25,6 +27,43 @@ class AWSProvider(ProviderBase):
         )
         self.ec2 = self.session.client('ec2')
         self.ec2_resource = self.session.resource('ec2')
+
+    @staticmethod
+    def get_default_config():
+        return {
+            "access_key": "",
+            "secret_key": "",
+            "default_region": "eu-west-1",
+            "default_image": "ami-0574da719dca65348",
+            "default_type": "t3.micro"
+        }
+
+    @staticmethod
+    def get_config_prompts(provider_config):
+        config = {}
+        config['access_key'] = functools.partial(click.prompt,
+            "Access Key",
+            default=provider_config.get('access_key', ''),
+            hide_input=False
+        )
+        config['secret_key'] = functools.partial(click.prompt,
+            "Secret Key",
+            default=provider_config.get('secret_key', ''),
+            hide_input=False
+        )
+        config['default_region'] = functools.partial(click.prompt,
+            "Default region",
+            default=provider_config.get('default_region', AWSProvider.get_default_config()['default_region'])
+        )
+        config['default_image'] = functools.partial(click.prompt,
+            "Default image",
+            default=provider_config.get('default_image', AWSProvider.get_default_config()['default_image'])
+        )
+        config['default_type'] = functools.partial(click.prompt,
+            "Default instance type",
+            default=provider_config.get('default_type', AWSProvider.get_default_config()['default_type'])
+        )
+        return config
 
     def get_or_create_vpc(self):
         """Get existing gmab VPC or create a new one."""

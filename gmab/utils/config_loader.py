@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 from gmab.utils.paths import get_config_file_path, ensure_config_dir_exists
+from gmab.providers import *
 
 # Default configurations
 DEFAULT_GENERAL_CONFIG = {
@@ -12,27 +13,11 @@ DEFAULT_GENERAL_CONFIG = {
     "default_provider": "linode"
 }
 
+# TODO: Any usage of DEFAULT_PROVIDERS_CONFIG should be replaced by a function
 DEFAULT_PROVIDERS_CONFIG = {
-    "linode": {
-        "api_key": "",
-        "default_region": "nl-ams",
-        "default_image": "linode/ubuntu22.04",
-        "default_type": "g6-nanode-1",
-        "default_root_pass": ""
-    },
-    "aws": {
-        "access_key": "",
-        "secret_key": "",
-        "default_region": "eu-west-1",
-        "default_image": "ami-0574da719dca65348",
-        "default_type": "t3.micro"
-    },
-    "hetzner": {
-        "api_key": "",
-        "default_region": "nbg1",
-        "default_image": "ubuntu-22.04",
-        "default_type": "cpx11"
-    }
+    "linode": LinodeProvider.get_default_config(),
+    "aws": AWSProvider.get_default_config(),
+    "hetzner": AWSProvider.get_default_config(),
 }
 
 class ConfigNotFoundError(Exception):
