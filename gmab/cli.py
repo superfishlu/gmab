@@ -6,6 +6,7 @@ from gmab.commands.terminate import terminate_box
 from gmab.commands.list import list_boxes
 from gmab.commands.configure import run_configure, print_configs
 from gmab.utils.config_loader import DEFAULT_PROVIDERS_CONFIG, config_exists, ConfigNotFoundError, load_config
+from gmab import __version__
 
 def check_config_exists():
     """Check if config exists and show an error message if it doesn't."""
@@ -23,10 +24,13 @@ def get_configured_providers():
     except (ConfigNotFoundError, Exception):
         return []
 
-@click.group()
-def cli():
+@click.group(invoke_without_command=True)
+@click.version_option(version=__version__, prog_name='gmab',message='%(prog)s %(version)s')
+@click.pass_context
+def cli(ctx):
     """ gmab (Give Me A Box) - CLI tool to spawn, list, and manage temporary cloud boxes. """
-    pass
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
 
 @cli.command()
 @click.option('--provider', '-p', default=None, help='Provider name (default from config).')

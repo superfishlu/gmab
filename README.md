@@ -114,6 +114,21 @@ gmab terminate all
 # Terminate expired instances
 gmab terminate expired
 ```
+### Version Information
+
+You can check the installed version of GMAB using the `-v` or `--version` flag:
+
+```bash
+# Check version with short flag
+gmab -v
+# gmab 0.1.1
+
+# Check version with long flag
+gmab --version
+# gmab 0.1.1
+```
+
+This is useful for debugging and ensuring you have the latest version installed.
 
 ## Provider-Specific Notes
 
