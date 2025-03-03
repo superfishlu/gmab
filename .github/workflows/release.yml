@@ -1,37 +1,91 @@
-name: Publish to PyPI
+name: Create GitHub Release
 
 on:
-  release:
-    types: [created]  # Trigger when a new release is created
+  push:
+    tags:
+      - 'v*'  # Trigger on any tag starting with 'v'
 
 jobs:
-  deploy:
-    name: Build and publish to PyPI
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
     permissions:
-      # Required for PyPI publishing
-      id-token: write  # For trusted publishing
-      contents: read   # For checkout
+      contents: write  # Required for creating releases
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for accurate version info
       
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
       
-      - name: Install build dependencies
+      - name: Extract version from tag
+        id: extract_version
         run: |
-          python -m pip install --upgrade pip
-          pip install build wheel twine
+          # Get version without the 'v' prefix
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
       
-      - name: Build distributions
+      - name: Extract release notes from CHANGELOG.md
+        id: extract_notes
         run: |
+          # Check if CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found. Creating basic release notes."
+            echo "## GMAB $VERSION - $(date +'%Y-%m-%d')" > release_notes.md
+            exit 0
+          fi
+          
+          # Extract section for current version
+          VERSION_PATTERN="## \[$VERSION\]|\## $VERSION"
+          SECTION_START=$(grep -n -E "$VERSION_PATTERN" CHANGELOG.md | head -1 | cut -d':' -f1)
+          
+          if [ -z "$SECTION_START" ]; then
+            echo "No section found for version $VERSION in CHANGELOG.md"
+            echo "## GMAB $VERSION - $(date +'%Y-%m-%d')" > release_notes.md
+            exit 0
+          fi
+          
+          # Find the next section to determine where current section ends
+          NEXT_SECTION=$(tail -n +$SECTION_START CHANGELOG.md | grep -n "^## " | head -2 | tail -1 | cut -d':' -f1)
+          
+          if [ -z "$NEXT_SECTION" ]; then
+            # Last section in the file
+            tail -n +$SECTION_START CHANGELOG.md > release_notes.md
+          else
+            # Extract just this section
+            END_LINE=$((SECTION_START + NEXT_SECTION - 1))
+            sed -n "${SECTION_START},${END_LINE}p" CHANGELOG.md > release_notes.md
+          fi
+          
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat release_notes.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # For debugging
+          echo "Extracted release notes:"
+          cat release_notes.md
+      
+      - name: Build package
+        run: |
+          pip install --upgrade pip
+          pip install build wheel
           python -m build
       
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        # Trusted publishing - no username/password needed
-        # Requires PyPI API token configured via GitHub repository settings
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: GMAB ${{ env.VERSION }}
+          body: ${{ env.RELEASE_NOTES }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
