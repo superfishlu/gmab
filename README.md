@@ -34,7 +34,7 @@ You can also install directly from the source code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/gmab.git
+git clone https://github.com/superfishlu/gmab.git
 cd gmab
 
 # Install the package
