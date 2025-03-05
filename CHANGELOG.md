@@ -2,6 +2,22 @@
 
 All notable changes to GMAB will be documented in this file.
 
+## [0.1.3] - 2025-03-05
+### Changed/Fixed
+- Removed old dependencies as documented in issue #5
+
+## [0.1.2] - 2025-03-03
+
+### Added
+- **--version** and **-v** flags to print the current version of gmab
+```bash
+gmab --version
+gmab 0.1.2
+```
+
+### Changed/Fixed
+- Merged PR6 to introduce (very) basic unit testing and remove (almost) all provider specific code from **configure.py**
+
 ## [0.1.1] - 2025-02-26
 
 ### Added
