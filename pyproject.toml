@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gmab"
-version = "0.1.1"
+version = "0.1.2"
 description = "Give Me A Box - CLI tool to spawn, list, and manage temporary cloud boxes"
 readme = "README.md"
 authors = [

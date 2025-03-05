@@ -31,6 +31,16 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
+      - name: Ensure version consistency
+        run: |
+          # Update version in __init__.py to match the tag
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" gmab/__init__.py
+          
+          # Verify the change was made
+          grep "__version__" gmab/__init__.py
+          
+          echo "Updated package version to $VERSION"
+      
       - name: Extract release notes from CHANGELOG.md
         id: extract_notes
         run: |
@@ -76,6 +86,27 @@ jobs:
           pip install --upgrade pip
           pip install build wheel
           python -m build
+      
+      - name: Verify built package version
+        run: |
+          # Show the generated files to confirm version
+          ls -la dist/
+          
+          # Check if the wheel filename contains the correct version
+          if ls dist/*-$VERSION-*.whl 1> /dev/null 2>&1; then
+            echo "✅ Wheel file has correct version: $VERSION"
+          else
+            echo "❌ Wheel file does not have correct version: $VERSION"
+            exit 1
+          fi
+          
+          # Check if the tarball filename contains the correct version
+          if ls dist/*-$VERSION.tar.gz 1> /dev/null 2>&1; then
+            echo "✅ Tarball file has correct version: $VERSION"
+          else
+            echo "❌ Tarball file does not have correct version: $VERSION"
+            exit 1
+          fi
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
