@@ -6,7 +6,7 @@ A CLI tool to spawn, list, and manage temporary cloud boxes.
 
 - Need a quick VPS for pentesting, bug bounty, or scanning?
 - Want to run commands from a different IP without using your local machine?
-- No need for manual cloud console interaction—just **gmab spawn**, and you're in!
+- No need for manual cloud console interaction - just **gmab spawn**, and you're in!
 
 
 ## Features
