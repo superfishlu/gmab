@@ -175,4 +175,7 @@ cython_debug/
 
 #gmab
 **/config/*.json
-*.pyc 
+*.pyc
+
+# Claude Code
+.claude/

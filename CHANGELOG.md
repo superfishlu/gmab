@@ -2,6 +2,10 @@
 
 All notable changes to GMAB will be documented in this file.
 
+## [0.1.4] - 2026-01-20
+### Changed
+- Re-published to PyPI after account restoration
+
 ## [0.1.3] - 2025-03-05
 ### Changed/Fixed
 - Removed old dependencies as documented in issue #5
