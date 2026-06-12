@@ -36,7 +36,7 @@ class TestDefaultProvidersConfig(ConfigDirTestCase):
         # Regression guard: the old code returned AWS defaults for Hetzner.
         defaults = get_default_providers_config()
         self.assertEqual(defaults["hetzner"]["default_region"], "nbg1")
-        self.assertEqual(defaults["hetzner"]["default_type"], "cpx11")
+        self.assertEqual(defaults["hetzner"]["default_type"], "cpx22")
         self.assertNotIn("access_key", defaults["hetzner"])
         self.assertIn("access_key", defaults["aws"])
         self.assertIn("default_root_pass", defaults["linode"])

@@ -17,6 +17,6 @@
         "api_key": "your_hetzner_api_token",
         "default_region": "nbg1",
         "default_image": "ubuntu-22.04",
-        "default_type": "cpx11"
+        "default_type": "cpx22"
     }
 }

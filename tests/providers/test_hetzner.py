@@ -12,7 +12,7 @@ def make_provider():
         "api_key": "tok",
         "default_region": "nbg1",
         "default_image": "ubuntu-22.04",
-        "default_type": "cpx11",
+        "default_type": "cpx22",
     })
     p.provider_name = "hetzner"
     return p
@@ -41,7 +41,7 @@ class TestHetznerSpawn(unittest.TestCase):
         args, kwargs = mock_post.call_args
         self.assertEqual(args[0], "https://api.hetzner.cloud/v1/servers")
         payload = kwargs["json"]
-        self.assertEqual(payload["server_type"], "cpx11")
+        self.assertEqual(payload["server_type"], "cpx22")
         self.assertEqual(payload["location"], "nbg1")
         self.assertEqual(payload["ssh_keys"], [42])
         self.assertTrue(payload["name"].startswith("gmab-"))

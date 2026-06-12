@@ -16,7 +16,10 @@ class HetznerProvider(ProviderBase):
         ConfigField("api_key", "API Key", secret=True, required=True),
         ConfigField("default_region", "Default region", default="nbg1"),
         ConfigField("default_image", "Default image", default="ubuntu-22.04"),
-        ConfigField("default_type", "Default instance type", default="cpx11"),
+        # cpx11 is US-only now; cpx22 is the smallest x86 type available in EU
+        # locations (nbg1/fsn1/hel1). Type/location availability shifts over time:
+        # cross-check GET /v1/server_types against GET /v1/datacenters.
+        ConfigField("default_type", "Default instance type", default="cpx22"),
     ]
 
     def __init__(self, provider_cfg):
@@ -130,7 +133,7 @@ class HetznerProvider(ProviderBase):
             Exception: For API errors or other failures
         """
         # Use provided values or fall back to defaults
-        default_type = self.provider_cfg.get("default_type", "cpx11")
+        default_type = self.provider_cfg.get("default_type", "cpx22")
         default_image = self.provider_cfg.get("default_image", "ubuntu-22.04")
         default_region = self.provider_cfg.get("default_region", "nbg1")
 
