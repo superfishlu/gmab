@@ -332,6 +332,24 @@ Configuration completed successfully!
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### Adding a new provider
+
+Providers are auto-discovered, so adding one is a single-file drop-in — you do **not**
+touch the factory, config loader, configure command, or CLI:
+
+1. Copy `gmab/providers/_template.py` to `gmab/providers/<yourprovider>.py`.
+2. Set the class `name` (the value users pass to `-p`) and declare `CONFIG_SCHEMA`
+   (a list of `ConfigField`s describing your credentials and defaults).
+3. Implement the four lifecycle methods: `spawn_instance`, `terminate_instance`,
+   `list_instances`, `list_expired_instances`.
+
+The base class derives the interactive `gmab configure` prompts, defaults, validation,
+and secret-masking from your `CONFIG_SCHEMA`, and provides shared helpers
+(`_read_ssh_key`, `is_expired`, `find_instance_id_by_label`, and `make_label`). Tag your
+instances with `gmab` so `list`/`terminate` only ever touch gmab-owned resources. To add
+a contract test, mix `ProviderContractMixin` (`tests/providers/provider_contract.py`)
+into a `unittest.TestCase` and set `provider_cls`.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

@@ -1,22 +1,24 @@
 # gmab/providers/aws.py
 
 import boto3
-import click
-import functools
-import random
-import string
 import time
-from pathlib import Path
-from gmab.providers.base import ProviderBase
-
-def generate_random_string(length=12):
-    """Generate a random string of lowercase letters and digits."""
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+from gmab.providers.base import ProviderBase, ConfigField
+from gmab.utils.naming import make_label
 
 class AWSProvider(ProviderBase):
     """
     Provider implementation for AWS EC2.
     """
+
+    name = "aws"
+
+    CONFIG_SCHEMA = [
+        ConfigField("access_key", "Access Key", secret=True, required=True),
+        ConfigField("secret_key", "Secret Key", secret=True, required=True),
+        ConfigField("default_region", "Default region", default="eu-west-1"),
+        ConfigField("default_image", "Default image", default="ami-0574da719dca65348"),
+        ConfigField("default_type", "Default instance type", default="t3.micro"),
+    ]
 
     def __init__(self, provider_cfg):
         super().__init__(provider_cfg)
@@ -28,42 +30,10 @@ class AWSProvider(ProviderBase):
         self.ec2 = self.session.client('ec2')
         self.ec2_resource = self.session.resource('ec2')
 
-    @staticmethod
-    def get_default_config():
-        return {
-            "access_key": "",
-            "secret_key": "",
-            "default_region": "eu-west-1",
-            "default_image": "ami-0574da719dca65348",
-            "default_type": "t3.micro"
-        }
-
-    @staticmethod
-    def get_config_prompts(provider_config):
-        config = {}
-        config['access_key'] = functools.partial(click.prompt,
-            "Access Key",
-            default=provider_config.get('access_key', ''),
-            hide_input=False
-        )
-        config['secret_key'] = functools.partial(click.prompt,
-            "Secret Key",
-            default=provider_config.get('secret_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = functools.partial(click.prompt,
-            "Default region",
-            default=provider_config.get('default_region', AWSProvider.get_default_config()['default_region'])
-        )
-        config['default_image'] = functools.partial(click.prompt,
-            "Default image",
-            default=provider_config.get('default_image', AWSProvider.get_default_config()['default_image'])
-        )
-        config['default_type'] = functools.partial(click.prompt,
-            "Default instance type",
-            default=provider_config.get('default_type', AWSProvider.get_default_config()['default_type'])
-        )
-        return config
+    @classmethod
+    def claims_identifier(cls, identifier):
+        """AWS instance IDs use the 'i-' prefix."""
+        return identifier.startswith('i-')
 
     def get_or_create_vpc(self):
         """Get existing gmab VPC or create a new one."""
@@ -215,7 +185,7 @@ class AWSProvider(ProviderBase):
         
         return subnets[0]['SubnetId']
 
-    def get_instance_id_by_label(self, label):
+    def find_instance_id_by_label(self, label):
         """Find instance ID by label, but only for instances with the 'gmab' tag."""
         try:
             response = self.ec2.describe_instances(
@@ -239,9 +209,8 @@ class AWSProvider(ProviderBase):
         tags = {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])}
         creation_time = int(tags.get('gmab-creation-time', '0'))
         lifetime_minutes = int(tags.get('gmab-lifetime', '60'))
-        current_time = int(time.time())
-        
-        is_expired = (current_time - creation_time) > (lifetime_minutes * 60)
+
+        is_expired = self.is_expired(creation_time, lifetime_minutes)
         return creation_time, lifetime_minutes, is_expired
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
@@ -257,23 +226,17 @@ class AWSProvider(ProviderBase):
         instance_type = self.provider_cfg.get("default_type", "t2.micro")
 
         # Generate a unique name tag
-        instance_name = f"gmab-{generate_random_string(12)}"
+        instance_name = make_label()
 
         # Current timestamp for creation time
         creation_time = int(time.time())
-        
+
         # Default lifetime if not specified
         if lifetime_minutes is None:
             lifetime_minutes = 60
 
         # Read SSH key
-        ssh_key_path = ssh_key_path or self.provider_cfg.get("ssh_key_path", "~/.ssh/id_ed25519.pub")
-        keyfile = Path(ssh_key_path).expanduser()
-        if not keyfile.exists():
-            raise FileNotFoundError(f"SSH key not found at {keyfile}")
-
-        with open(keyfile, 'r') as f:
-            ssh_key_content = f.read().strip()
+        ssh_key_content = self._read_ssh_key(ssh_key_path)
 
         # Setup networking
         vpc_id = self.get_or_create_vpc()
@@ -281,7 +244,7 @@ class AWSProvider(ProviderBase):
         subnet_id = self.get_subnet_id(vpc_id)
 
         # Import SSH key to AWS
-        key_name = f"gmab-key-{generate_random_string(8)}"
+        key_name = make_label(prefix="gmab-key", length=8)
         try:
             self.ec2.import_key_pair(
                 KeyName=key_name,
@@ -361,7 +324,7 @@ class AWSProvider(ProviderBase):
         try:
             # If it's not a typical AWS instance ID format, try to find by label
             if not instance_identifier.startswith('i-'):
-                instance_id = self.get_instance_id_by_label(instance_identifier)
+                instance_id = self.find_instance_id_by_label(instance_identifier)
                 if instance_id is None:
                     raise Exception(f"No instance found with label '{instance_identifier}'")
             else:

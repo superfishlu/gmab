@@ -1,23 +1,24 @@
 # gmab/providers/hetzner.py
 
-import click
-import functools
 import requests
-import random
-import string
 import time
-from pathlib import Path
-from gmab.providers.base import ProviderBase
-
-def generate_random_string(length=12):
-    """Generate a random string of lowercase letters and digits."""
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+from gmab.providers.base import ProviderBase, ConfigField
+from gmab.utils.naming import make_label
 
 class HetznerProvider(ProviderBase):
     """
     Provider implementation for Hetzner Cloud.
     """
-    
+
+    name = "hetzner"
+
+    CONFIG_SCHEMA = [
+        ConfigField("api_key", "API Key", secret=True, required=True),
+        ConfigField("default_region", "Default region", default="nbg1"),
+        ConfigField("default_image", "Default image", default="ubuntu-22.04"),
+        ConfigField("default_type", "Default instance type", default="cpx11"),
+    ]
+
     def __init__(self, provider_cfg):
         """
         Initialize the Hetzner provider with the given configuration.
@@ -54,9 +55,8 @@ class HetznerProvider(ProviderBase):
         # In Hetzner, we store these as gmab-creation-time and gmab-lifetime
         creation_time = int(labels.get("gmab-creation-time", "0"))
         lifetime_minutes = int(labels.get("gmab-lifetime", "60"))
-        
-        current_time = int(time.time())
-        is_expired = (current_time - creation_time) > (lifetime_minutes * 60)
+
+        is_expired = self.is_expired(creation_time, lifetime_minutes)
         return creation_time, lifetime_minutes, is_expired
 
     def _get_or_create_ssh_key(self, ssh_key_content):
@@ -90,7 +90,7 @@ class HetznerProvider(ProviderBase):
                     return key["id"]
             
             # If no matching key found, create new one
-            ssh_key_name = f"gmab-key-{generate_random_string(8)}"
+            ssh_key_name = make_label(prefix="gmab-key", length=8)
             create_response = requests.post(
                 f"{self.api_url}/ssh_keys",
                 headers=self.headers,
@@ -110,37 +110,6 @@ class HetznerProvider(ProviderBase):
             raise Exception(f"Network error when managing SSH keys: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to get or create SSH key: {str(e)}")
-        
-    @staticmethod
-    def get_default_config():
-        return {
-            "api_key": "",
-            "default_region": "nbg1",
-            "default_image": "ubuntu-22.04",
-            "default_type": "cpx11"
-        }
-    
-    @staticmethod
-    def get_config_prompts(provider_config):
-        config = {}
-        config['api_key'] = functools.partial(click.prompt,
-            "API Key",
-            default=provider_config.get('api_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = functools.partial(click.prompt,
-            "Default region",
-            default=provider_config.get('default_region', HetznerProvider.get_default_config()['default_region'])
-        )
-        config['default_image'] = functools.partial(click.prompt,
-            "Default image",
-            default=provider_config.get('default_image', HetznerProvider.get_default_config()['default_image'])
-        )
-        config['default_type'] = functools.partial(click.prompt,
-            "Default instance type",
-            default=provider_config.get('default_type', HetznerProvider.get_default_config()['default_type'])
-        )
-        return config
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
         """
@@ -175,16 +144,10 @@ class HetznerProvider(ProviderBase):
         creation_time = int(time.time())
 
         # Read SSH key
-        ssh_key_path = ssh_key_path or self.provider_cfg.get("ssh_key_path", "~/.ssh/id_ed25519.pub")
-        keyfile = Path(ssh_key_path).expanduser()
-        if not keyfile.exists():
-            raise FileNotFoundError(f"SSH key not found at {keyfile}")
-
-        with open(keyfile, 'r') as f:
-            ssh_key_content = f.read().strip()
+        ssh_key_content = self._read_ssh_key(ssh_key_path)
 
         # Generate a unique name
-        instance_name = f"gmab-{generate_random_string(12)}"
+        instance_name = make_label()
 
         try:
             # Get or create SSH key
@@ -231,26 +194,6 @@ class HetznerProvider(ProviderBase):
         except Exception as e:
             raise Exception(f"Failed to create Hetzner instance: {str(e)}")
 
-    def get_instance_id_by_label(self, label):
-        """
-        Find instance ID by label, but only for instances with the 'gmab' label.
-        
-        Args:
-            label (str): The instance label to search for
-            
-        Returns:
-            str or None: The instance ID if found, None otherwise
-        """
-        try:
-            instances = self.list_instances()
-            for instance in instances:
-                if instance["label"] == label:
-                    return instance["instance_id"]
-            return None
-            
-        except Exception:
-            return None
-
     def terminate_instance(self, instance_identifier):
         """
         Terminate a Hetzner server by ID or label.
@@ -264,7 +207,7 @@ class HetznerProvider(ProviderBase):
         try:
             # If it's not a numeric ID, try to find by label
             if not instance_identifier.isdigit():
-                instance_id = self.get_instance_id_by_label(instance_identifier)
+                instance_id = self.find_instance_id_by_label(instance_identifier)
                 if instance_id is None:
                     raise Exception(f"No instance found with label '{instance_identifier}'")
             else:

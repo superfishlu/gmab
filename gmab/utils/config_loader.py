@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from gmab.utils.paths import get_config_file_path, ensure_config_dir_exists
-from gmab.providers import *
+from gmab.providers import get_registry
 
 # Default configurations
 DEFAULT_GENERAL_CONFIG = {
@@ -13,12 +13,9 @@ DEFAULT_GENERAL_CONFIG = {
     "default_provider": "linode"
 }
 
-# TODO: Any usage of DEFAULT_PROVIDERS_CONFIG should be replaced by a function
-DEFAULT_PROVIDERS_CONFIG = {
-    "linode": LinodeProvider.get_default_config(),
-    "aws": AWSProvider.get_default_config(),
-    "hetzner": AWSProvider.get_default_config(),
-}
+def get_default_providers_config():
+    """Build the default providers.json contents from the provider registry."""
+    return {name: cls.get_default_config() for name, cls in get_registry().items()}
 
 class ConfigNotFoundError(Exception):
     """Exception raised when a config file does not exist and should not be auto-created."""
@@ -61,8 +58,8 @@ def load_config(filename, create_if_missing=False):
             )
         
         # Otherwise create default config
-        default_content = (DEFAULT_GENERAL_CONFIG if actual_filename == 'config.json' 
-                         else DEFAULT_PROVIDERS_CONFIG)
+        default_content = (DEFAULT_GENERAL_CONFIG if actual_filename == 'config.json'
+                         else get_default_providers_config())
         ensure_config_dir_exists()
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(default_content, f, indent=2)

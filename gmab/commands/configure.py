@@ -5,10 +5,9 @@ from pathlib import Path
 import json
 from gmab.utils.paths import get_config_file_path, ensure_config_dir_exists
 from gmab.utils.config_loader import (
-    load_config, save_config, DEFAULT_GENERAL_CONFIG, 
-    DEFAULT_PROVIDERS_CONFIG, ConfigNotFoundError
+    load_config, save_config, DEFAULT_GENERAL_CONFIG, ConfigNotFoundError
 )
-from gmab import providers
+from gmab.providers import get_registry, get_available_providers
 
 def update_nested_dict(original, updates):
     """Recursively update a nested dictionary without overwriting unspecified values."""
@@ -37,11 +36,15 @@ def print_configs():
                     config_data = json.load(f)
                     # Handle sensitive data
                     if filename == 'providers.json':
-                        # Mask sensitive values in a copy of the config
+                        # Mask sensitive values in a copy of the config, using each
+                        # provider's declared secret keys.
+                        registry = get_registry()
                         masked_config = json.loads(json.dumps(config_data))
-                        for provider in masked_config.values():
+                        for provider_name, provider in masked_config.items():
+                            provider_cls = registry.get(provider_name)
+                            secret_keys = provider_cls.secret_keys() if provider_cls else []
                             for key in provider:
-                                if key in ['api_key', 'access_key', 'secret_key', 'default_root_pass']:
+                                if key in secret_keys:
                                     provider[key] = '********'
                         config_data = masked_config
                     
@@ -68,7 +71,7 @@ def configure_general(current_config):
     )
     
     # Only show providers that have been configured
-    available_providers = list(DEFAULT_PROVIDERS_CONFIG.keys())
+    available_providers = get_available_providers()
     
     # In case we're updating an existing config, get the current provider
     current_provider = current_config.get('default_provider', DEFAULT_GENERAL_CONFIG['default_provider'])
@@ -90,17 +93,17 @@ def configure_provider(provider_name, current_config):
     click.echo(f"\nConfiguring {provider_name} provider:")
     
     provider_config = current_config.get(provider_name, {})
-    config = None
-    
-    # Iterate each class in gmab/providers to get their prompts
-    for name, cls in providers.__dict__.items():
-        if name.lower() == provider_name.lower() + "provider":
-            config = cls.get_config_prompts(provider_config)
-    
+
+    provider_cls = get_registry().get(provider_name)
+    if provider_cls is None:
+        raise ValueError(f"Unknown provider: {provider_name}")
+
+    config = provider_cls.get_config_prompts(provider_config)
+
     # Execute the prompts
     for key in config.keys():
         config[key] = config[key]()
-    
+
     return config
         
 
@@ -121,13 +124,14 @@ def validate_configs():
             if default_provider not in providers_config:
                 click.echo(f"\nWarning: Default provider '{default_provider}' is not configured")
             else:
-                # TODO: This should be done in a validate() function inside the provider
                 provider_config = providers_config.get(default_provider, {})
-                if default_provider == 'aws':
-                    if not provider_config.get('access_key') or not provider_config.get('secret_key'):
-                        click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing AWS credentials)")
-                elif not provider_config.get('api_key'):
-                    click.echo(f"\nWarning: Default provider '{default_provider}' is not fully configured (missing API key)")
+                provider_cls = get_registry().get(default_provider)
+                missing = provider_cls.validate_config(provider_config) if provider_cls else []
+                if missing:
+                    click.echo(
+                        f"\nWarning: Default provider '{default_provider}' is not fully configured "
+                        f"(missing: {', '.join(missing)})"
+                    )
     except Exception as e:
         click.echo(f"\nWarning: Could not validate configurations: {str(e)}")
 
@@ -154,7 +158,7 @@ def run_configure(provider):
         save_config(new_general_config, 'config.json')
         
         # Configure each provider
-        for prov in DEFAULT_PROVIDERS_CONFIG.keys():
+        for prov in get_available_providers():
             if click.confirm(f"\nDo you want to configure {prov}?", default=True):
                 providers_config[prov] = configure_provider(prov, providers_config)
         

@@ -1,59 +1,24 @@
 ﻿# gmab/providers/linode.py
 
-import click
-import functools
 import requests
-import random
-import string
 import time
-from pathlib import Path
-from gmab.providers.base import ProviderBase
-
-def generate_random_string(length=12):
-    """Generate a random string of lowercase letters and digits."""
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+from gmab.providers.base import ProviderBase, ConfigField
+from gmab.utils.naming import make_label
 
 class LinodeProvider(ProviderBase):
     """
     Provider implementation for Linode.
     """
 
-    @staticmethod
-    def get_default_config():
-        return {
-            "api_key": "",
-            "default_region": "nl-ams",
-            "default_image": "linode/ubuntu22.04",
-            "default_type": "g6-nanode-1",
-            "default_root_pass": ""
-        }
+    name = "linode"
 
-    @staticmethod
-    def get_config_prompts(provider_config):
-        config = {}
-        config['api_key'] = functools.partial(click.prompt,
-            "API Key",
-            default=provider_config.get('api_key', ''),
-            hide_input=False
-        )
-        config['default_region'] = functools.partial(click.prompt,
-            "Default region",
-            default=provider_config.get('default_region', LinodeProvider.get_default_config()['default_region'])
-        )
-        config['default_image'] = functools.partial(click.prompt,
-            "Default image",
-            default=provider_config.get('default_image', LinodeProvider.get_default_config()['default_image'])
-        )
-        config['default_type'] = functools.partial(click.prompt,
-            "Default instance type",
-            default=provider_config.get('default_type', LinodeProvider.get_default_config()['default_type'])
-        )
-        config['default_root_pass'] = functools.partial(click.prompt,
-            "Default root password",
-            default=provider_config.get('default_root_pass', ''),
-            hide_input=False
-        )
-        return config
+    CONFIG_SCHEMA = [
+        ConfigField("api_key", "API Key", secret=True, required=True),
+        ConfigField("default_region", "Default region", default="nl-ams"),
+        ConfigField("default_image", "Default image", default="linode/ubuntu22.04"),
+        ConfigField("default_type", "Default instance type", default="g6-nanode-1"),
+        ConfigField("default_root_pass", "Default root password", secret=True),
+    ]
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
         """
@@ -97,14 +62,7 @@ class LinodeProvider(ProviderBase):
         creation_time = int(time.time())
 
         root_pass = self.provider_cfg.get("default_root_pass", "ChangeMe123!")
-        ssh_key_path = ssh_key_path or self.provider_cfg.get("ssh_key_path", "~/.ssh/id_ed25519.pub")
-
-        keyfile = Path(ssh_key_path).expanduser()
-        if not keyfile.exists():
-            raise FileNotFoundError(f"SSH key not found at {keyfile}")
-
-        with open(keyfile, 'r') as f:
-            ssh_key = f.read().strip()
+        ssh_key = self._read_ssh_key(ssh_key_path)
 
         headers = {
             "Content-Type": "application/json",
@@ -112,7 +70,7 @@ class LinodeProvider(ProviderBase):
         }
 
         # Generate a unique Linode name
-        random_name = f"gmab-{generate_random_string(12)}"
+        random_name = make_label()
 
         data = {
             "type": linode_type,
@@ -159,22 +117,6 @@ class LinodeProvider(ProviderBase):
         except Exception as e:
             raise Exception(f"Failed to create Linode instance: {str(e)}")
 
-    def get_instance_id_by_label(self, label):
-        """
-        Find the Linode instance ID by its label, but only for instances with the 'gmab' tag.
-        
-        Args:
-            label (str): The instance label to search for
-            
-        Returns:
-            str or None: The instance ID if found, None otherwise
-        """
-        instances = self.list_instances()
-        for instance in instances:
-            if instance["label"] == label:
-                return instance["instance_id"]
-        return None
-
     def terminate_instance(self, instance_identifier):
         """
         Terminate a Linode instance by ID or label.
@@ -192,7 +134,7 @@ class LinodeProvider(ProviderBase):
         headers = {"Authorization": f"Bearer {token}"}
 
         if not instance_identifier.isdigit():
-            instance_id = self.get_instance_id_by_label(instance_identifier)
+            instance_id = self.find_instance_id_by_label(instance_identifier)
             if instance_id is None:
                 raise Exception(f"Instance with label '{instance_identifier}' not found or not tagged with 'gmab'.")
         else:
@@ -231,9 +173,8 @@ class LinodeProvider(ProviderBase):
                 creation_time = int(tag.split("-")[-1])
             elif tag.startswith("gmab-lifetime-"):
                 lifetime_minutes = int(tag.split("-")[-1])
-        
-        current_time = int(time.time())
-        is_expired = (current_time - creation_time) > (lifetime_minutes * 60)
+
+        is_expired = self.is_expired(creation_time, lifetime_minutes)
         return creation_time, lifetime_minutes, is_expired
 
     def list_instances(self):

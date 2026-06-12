@@ -2,7 +2,7 @@
 
 import click
 from gmab.utils.config_loader import load_config, ConfigNotFoundError
-from gmab.providers import get_provider
+from gmab.providers import get_provider, get_registry
 
 def get_instance_provider(instance_identifier, providers_cfg):
     """
@@ -16,21 +16,14 @@ def get_instance_provider(instance_identifier, providers_cfg):
     Returns:
         tuple: (provider_name, provider_instance) or (None, None) if not found
     """
-    # First try to determine by ID format
-    if instance_identifier.startswith('i-'):
-        # AWS instance ID format
-        provider_name = "aws"
-        if provider_name in providers_cfg:
+    # Fast path: if a provider recognizes this identifier as its own native ID
+    # format (e.g. AWS "i-..."), use it directly when it's configured.
+    for provider_name, provider_class in get_registry().items():
+        if provider_class.claims_identifier(instance_identifier) and providers_cfg.get(provider_name):
             provider = get_provider(provider_name, providers_cfg[provider_name])
             return provider_name, provider
-    elif instance_identifier.startswith('gmab-'):
-        # Check all providers for this label since multiple could use this format
-        provider_name = None
-    else:
-        # For numeric IDs or other formats, we need to check all providers
-        provider_name = None
 
-    # If we couldn't determine by format or need to check labels, query each provider
+    # Otherwise (labels, numeric IDs, unconfigured fast-path), query each provider
     for provider_name, provider_cfg in providers_cfg.items():
         if not provider_cfg:  # Skip empty provider configs
             continue

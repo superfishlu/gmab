@@ -5,7 +5,8 @@ from gmab.commands.spawn import spawn_box
 from gmab.commands.terminate import terminate_box
 from gmab.commands.list import list_boxes
 from gmab.commands.configure import run_configure, print_configs
-from gmab.utils.config_loader import DEFAULT_PROVIDERS_CONFIG, config_exists, ConfigNotFoundError, load_config
+from gmab.utils.config_loader import config_exists, ConfigNotFoundError, load_config
+from gmab.providers import get_available_providers
 from gmab import __version__
 
 def check_config_exists():
@@ -278,7 +279,7 @@ def list_command(provider):  # Renamed from 'list' to avoid conflicts
 @cli.command()
 @click.option(
     '--provider', '-p',
-    type=click.Choice(['all'] + list(DEFAULT_PROVIDERS_CONFIG.keys())),
+    type=click.Choice(['all'] + get_available_providers()),
     default='all',
     help='Specific provider to configure (default: all providers).'
 )
