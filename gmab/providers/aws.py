@@ -38,6 +38,11 @@ class AWSProvider(ProviderBase):
         """AWS instance IDs use the 'i-' prefix."""
         return identifier.startswith('i-')
 
+    def ssh_user(self, image=None):
+        # The default AMI is Ubuntu (login user 'ubuntu'). Amazon Linux images use
+        # 'ec2-user', but an AMI ID doesn't reveal the distro, so assume the default.
+        return "ubuntu"
+
     def get_or_create_vpc(self):
         """Get existing gmab VPC or create a new one."""
         # Check for existing gmab VPC

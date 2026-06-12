@@ -36,11 +36,12 @@ def spawn_box(provider_name=None, region=None, image=None, lifetime=None):
             lifetime_minutes=chosen_lifetime
         )
 
+        ssh_user = provider.ssh_user(chosen_image)
         click.echo(f"Spawned '{provider_name}' instance:")
         click.echo(f"  ID: {instance_info['instance_id']}")
         click.echo(f"  Label: {instance_info['label']}")
         click.echo(f"  IP: {instance_info['ip']}")
-        click.echo(f"  Connect via: ssh root@{instance_info['ip']}")
+        click.echo(f"  Connect via: ssh {ssh_user}@{instance_info['ip']}")
         
         return instance_info
     

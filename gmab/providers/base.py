@@ -149,6 +149,14 @@ class ProviderBase(ABC):
         """
         return False
 
+    def ssh_user(self, image=None):
+        """
+        The SSH login user for instances spawned by this provider, used for the
+        post-spawn connect hint. Linode and Hetzner enable root login on their
+        default images; providers whose images use a non-root user override this.
+        """
+        return "root"
+
     # --- Required provider-specific implementations -------------------------
 
     @abstractmethod

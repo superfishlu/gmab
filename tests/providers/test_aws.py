@@ -46,6 +46,11 @@ class TestAWSClaimsIdentifier(unittest.TestCase):
         self.assertFalse(AWSProvider.claims_identifier("12345"))
 
 
+class TestAWSSshUser(unittest.TestCase):
+    def test_default_ubuntu_image_uses_ubuntu(self):
+        self.assertEqual(make_provider().ssh_user(), "ubuntu")
+
+
 class TestAWSList(unittest.TestCase):
     def test_list_parses_and_computes_expiry(self):
         now = int(time.time())

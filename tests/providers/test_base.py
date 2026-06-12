@@ -4,6 +4,8 @@ import tempfile
 import time
 import unittest
 
+from gmab.providers.hetzner import HetznerProvider
+from gmab.providers.linode import LinodeProvider
 from gmab.utils.naming import make_label, generate_random_string
 from tests.support.fakes import FakeProvider, make_instance
 
@@ -68,6 +70,15 @@ class TestMakeLabel(unittest.TestCase):
     def test_generate_random_string_charset(self):
         s = generate_random_string(20)
         self.assertTrue(re.fullmatch(r"[a-z0-9]{20}", s), s)
+
+
+class TestSshUser(unittest.TestCase):
+    def test_default_is_root(self):
+        self.assertEqual(FakeProvider({}).ssh_user(), "root")
+
+    def test_linode_and_hetzner_use_root(self):
+        self.assertEqual(LinodeProvider({}).ssh_user(), "root")
+        self.assertEqual(HetznerProvider({"api_key": "x"}).ssh_user(), "root")
 
 
 if __name__ == "__main__":

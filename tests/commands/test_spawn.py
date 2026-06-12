@@ -46,6 +46,15 @@ class TestSpawnBox(ConfigDirTestCase):
         self.assertEqual(call["image"], "linode/ubuntu22.04")
         self.assertEqual(call["lifetime_minutes"], 60)
 
+    def test_connect_hint_uses_provider_ssh_user(self):
+        self.fake.ssh_user = lambda image=None: "ubuntu"
+        with patch("gmab.commands.spawn.get_provider", return_value=self.fake):
+            with patch("gmab.commands.spawn.click.echo") as echo:
+                spawn_box()
+        output = "\n".join(str(c) for c in echo.call_args_list)
+        self.assertIn("ssh ubuntu@", output)
+        self.assertNotIn("ssh root@", output)
+
     def test_unconfigured_provider_raises(self):
         with patch("gmab.commands.spawn.get_provider", return_value=self.fake):
             with self.assertRaises(Exception):
