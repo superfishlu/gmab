@@ -1,8 +1,13 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [created]  # Trigger when a new release is created
+  # Trigger directly on the version tag push. (The old `release: created`
+  # trigger never fired: releases created by release.yml use the automatic
+  # GITHUB_TOKEN, and GitHub does not start workflows from GITHUB_TOKEN events.)
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:  # allow manual re-runs from the Actions tab / gh
 
 jobs:
   deploy:
