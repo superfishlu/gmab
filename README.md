@@ -1,4 +1,4 @@
-﻿# GMAB (Give Me A Box) v0.1.4
+﻿# GMAB (Give Me A Box) v0.2.0
 
 A CLI tool to spawn, list, and manage temporary cloud boxes.
 
@@ -121,11 +121,11 @@ You can check the installed version of GMAB using the `-v` or `--version` flag:
 ```bash
 # Check version with short flag
 gmab -v
-# gmab 0.1.1
+# gmab 0.2.0
 
 # Check version with long flag
 gmab --version
-# gmab 0.1.1
+# gmab 0.2.0
 ```
 
 This is useful for debugging and ensuring you have the latest version installed.

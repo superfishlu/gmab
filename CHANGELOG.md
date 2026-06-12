@@ -2,6 +2,25 @@
 
 All notable changes to GMAB will be documented in this file.
 
+## [0.2.0] - 2026-06-12
+### Changed
+- Refactored provider integration into a self-registering plugin model: providers are
+  auto-discovered from `gmab/providers/`, so adding one is a single drop-in file with no
+  edits to the factory, config loader, configure command, or CLI.
+- Replaced per-provider `get_default_config`/`get_config_prompts` with a declarative
+  `CONFIG_SCHEMA`; the base class now derives defaults, prompts, validation, and secret masking.
+- Hoisted shared logic (SSH key reading, label generation, expiry math, label-to-id lookup)
+  into `ProviderBase` and `gmab/utils/naming.py`.
+
+### Added
+- `gmab/providers/_template.py` reference implementation and an "Adding a provider" guide.
+- A mocked, offline test suite (stdlib unittest, no new dependencies) covering provider
+  lifecycle, base helpers, the command layer, and the config layer.
+
+### Fixed
+- Provider config defaults handed Hetzner AWS's defaults.
+- `__version__` was left at 0.1.3 in the 0.1.4 release.
+
 ## [0.1.4] - 2026-01-20
 ### Changed
 - Re-published to PyPI after account restoration
