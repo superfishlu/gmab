@@ -8,7 +8,7 @@
 #   3. Declare CONFIG_SCHEMA: the credentials + defaults you need.
 #   4. Implement the four lifecycle methods below.
 #
-# That's it. The registry auto-discovers this module on import — you do NOT edit
+# That's it. The registry auto-discovers this module on import; you do NOT edit
 # the factory, the config loader, the configure command, or the CLI. The leading
 # underscore in this filename keeps the template itself out of the registry.
 #
@@ -17,7 +17,7 @@
 #   provider, instance_id, label, ip, status, region, image,
 #   creation_time (unix ts), lifetime_minutes
 # Tag/label your instances with "gmab" so list_instances() only ever returns
-# gmab-owned resources — `terminate all` relies on this.
+# gmab-owned resources, which `terminate all` relies on.
 
 import time
 
@@ -28,7 +28,7 @@ from gmab.utils.naming import make_label
 class TemplateProvider(ProviderBase):
     """Provider implementation for <Your Cloud>."""
 
-    # Registry key — what `gmab spawn -p <name>` matches. Set this to a real
+    # Registry key: what `gmab spawn -p <name>` matches. Set this to a real
     # value (e.g. "digitalocean") in your copy. Left None here so the template
     # never registers even if the underscore convention is bypassed.
     name = None
@@ -118,3 +118,17 @@ class TemplateProvider(ProviderBase):
 
     def list_expired_instances(self):
         return [inst for inst in self.list_instances() if inst["is_expired"]]
+
+    # --- Optional: richer `gmab list detail [verbose]` output ----------------
+    # The base class provides working defaults (details fall back to the basic
+    # list dict; no extras). Override these to surface more from your API.
+    #
+    # def get_instance_details(self, instance_id):
+    #     """Return the full single-instance API payload (verbose renders it all)."""
+    #     return api_get_instance(instance_id)
+    #
+    # def detail_extras(self, raw):
+    #     """Provider-specific (label, value) rows for the non-verbose detail view.
+    #     Skip fields already shown by gmab (provider, id, label, status, ip,
+    #     region, image, created, lifetime, time-left)."""
+    #     return [("Flavor", raw.get("flavor")), ("VPC", raw.get("vpc_id"))]

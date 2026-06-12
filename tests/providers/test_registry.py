@@ -7,6 +7,7 @@ from gmab.providers import (
     AWSProvider,
     LinodeProvider,
     HetznerProvider,
+    OVHProvider,
 )
 from tests.providers.provider_contract import ProviderContractMixin
 
@@ -52,6 +53,10 @@ class TestAWSContract(ProviderContractMixin, unittest.TestCase):
 
 class TestHetznerContract(ProviderContractMixin, unittest.TestCase):
     provider_cls = HetznerProvider
+
+
+class TestOVHContract(ProviderContractMixin, unittest.TestCase):
+    provider_cls = OVHProvider
 
 
 if __name__ == "__main__":

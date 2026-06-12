@@ -283,8 +283,35 @@ class HetznerProvider(ProviderBase):
     def list_expired_instances(self):
         """
         List all expired instances.
-        
+
         Returns:
             list: List of expired instance dictionaries
         """
         return [inst for inst in self.list_instances() if inst['is_expired']]
+
+    def get_instance_details(self, instance_id):
+        """Fetch the full Hetzner server object for the detail view."""
+        try:
+            resp = requests.get(
+                f"{self.api_url}/servers/{instance_id}",
+                headers=self.headers,
+                timeout=30,
+            )
+            if resp.status_code != 200:
+                raise Exception(f"Failed to get Hetzner server details: {resp.text}")
+            return resp.json().get("server", {})
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Network error when fetching Hetzner details: {str(e)}")
+
+    def detail_extras(self, raw):
+        server_type = raw.get("server_type", {}) or {}
+        datacenter = raw.get("datacenter", {}) or {}
+        location = datacenter.get("location", {}) or {}
+        return [
+            ("Server type", server_type.get("name")),
+            ("Cores", server_type.get("cores")),
+            ("Memory (GB)", server_type.get("memory")),
+            ("Disk (GB)", server_type.get("disk")),
+            ("Datacenter", datacenter.get("name")),
+            ("Location", location.get("city") or location.get("name")),
+        ]

@@ -2,6 +2,42 @@
 
 All notable changes to GMAB will be documented in this file.
 
+## [0.2.5] - 2026-06-12
+### Added
+- JSON output for automation: `-o json` (`--output`) on `spawn`, `list` (including
+  `list detail [verbose]`), and `terminate`. The default format can also be set once via
+  `output_format` in `config.json` (`text` or `json`); the `-o` flag overrides it. In JSON
+  mode, `terminate` writes its to-be-terminated "plan" and confirmation prompt to stderr so
+  stdout stays a single valid JSON result document.
+- OVHcloud Public Cloud provider (`-p ovh`). Instances are scoped to a Public Cloud
+  project (`service_name`); since OVH instances carry no tags, gmab encodes the creation
+  time and lifetime in the instance name and filters on the `gmab-` prefix. Region-specific
+  `flavorId`/`imageId` UUIDs are resolved from human names (`d2-2`, `Ubuntu 22.04`) per
+  region at spawn time, so the defaults don't rot. Uses AK/AS/CK authentication.
+- Mocked, offline test coverage for the OVH provider.
+- `gmab list detail` and `gmab list detail verbose`: per-instance detail tables. The
+  non-verbose view shows the common fields plus provider-specific extras (AWS VPC/subnet/
+  security groups/AZ, OVH flavor/plan, Hetzner server type/datacenter, Linode specs);
+  `verbose` dumps the full provider API response (flattened). Pass an instance id or label
+  to show just that one instance, otherwise every instance is shown. Providers expose this
+  via two new optional hooks, `get_instance_details()` and `detail_extras()`.
+- `gmab list` now renders a responsive table (via `rich`) that auto-sizes to the terminal
+  width, wraps long cells instead of truncating them (so full instance IDs and labels are
+  always recoverable), drops low-priority columns (Image, then Region, then Instance ID) on
+  narrow terminals while always keeping Provider/Label/IP/Status/Time Left, draws a separator
+  line between instances, colorizes status (green running, orange expired) and an expired
+  Time Left in red, and falls back to ASCII borders on consoles that can't render box-drawing
+  characters.
+
+### Changed
+- Added `ovh` and `rich` to the runtime dependencies.
+- OVH `gmab list` shows the friendly image name (e.g. `Ubuntu 22.04`) instead of the raw
+  image UUID, resolved per region and cached.
+- `gmab terminate` now previews the instances to be terminated using the same responsive
+  table as `gmab list` in every case (a single instance, several, `all`, or `expired`)
+  instead of a plain bulleted list or a bare confirmation prompt. Identifiers that don't
+  resolve are shown as a "not found" row.
+
 ## [0.2.0] - 2026-06-12
 ### Changed
 - Refactored provider integration into a self-registering plugin model: providers are

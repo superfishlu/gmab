@@ -10,7 +10,8 @@ from gmab.providers import get_registry
 DEFAULT_GENERAL_CONFIG = {
     "ssh_key_path": "~/.ssh/id_ed25519.pub",
     "default_lifetime_minutes": 60,
-    "default_provider": "linode"
+    "default_provider": "linode",
+    "output_format": "text"
 }
 
 def get_default_providers_config():

@@ -2,9 +2,10 @@
 
 import click
 from gmab.utils.config_loader import load_config, ConfigNotFoundError
+from gmab.utils.output import emit_json, instance_to_json
 from gmab.providers import get_provider
 
-def spawn_box(provider_name=None, region=None, image=None, lifetime=None):
+def spawn_box(provider_name=None, region=None, image=None, lifetime=None, output="text"):
     """Spawn a new cloud instance with the specified parameters."""
     try:
         # Load main configs
@@ -37,12 +38,15 @@ def spawn_box(provider_name=None, region=None, image=None, lifetime=None):
         )
 
         ssh_user = provider.ssh_user(chosen_image)
-        click.echo(f"Spawned '{provider_name}' instance:")
-        click.echo(f"  ID: {instance_info['instance_id']}")
-        click.echo(f"  Label: {instance_info['label']}")
-        click.echo(f"  IP: {instance_info['ip']}")
-        click.echo(f"  Connect via: ssh {ssh_user}@{instance_info['ip']}")
-        
+        if output == "json":
+            emit_json({**instance_to_json(instance_info), "ssh_user": ssh_user})
+        else:
+            click.echo(f"Spawned '{provider_name}' instance:")
+            click.echo(f"  ID: {instance_info['instance_id']}")
+            click.echo(f"  Label: {instance_info['label']}")
+            click.echo(f"  IP: {instance_info['ip']}")
+            click.echo(f"  Connect via: ssh {ssh_user}@{instance_info['ip']}")
+
         return instance_info
     
     except ConfigNotFoundError:

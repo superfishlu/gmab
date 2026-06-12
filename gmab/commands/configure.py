@@ -81,11 +81,18 @@ def configure_general(current_config):
         default=current_provider,
         type=click.Choice(available_providers, case_sensitive=False)
     )
-    
+
+    output_format = click.prompt(
+        "Default output format",
+        default=current_config.get('output_format', DEFAULT_GENERAL_CONFIG['output_format']),
+        type=click.Choice(['text', 'json'], case_sensitive=False)
+    )
+
     return {
         'ssh_key_path': ssh_key_path,
         'default_lifetime_minutes': default_lifetime,
-        'default_provider': default_provider
+        'default_provider': default_provider,
+        'output_format': output_format
     }
 
 def configure_provider(provider_name, current_config):

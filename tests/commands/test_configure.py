@@ -12,10 +12,10 @@ from tests.support.config_env import ConfigDirTestCase
 class TestRunConfigure(ConfigDirTestCase):
     def test_specific_provider_writes_both_files(self):
         # Scripted answers, in call order:
-        # configure_general: ssh_key_path, default_lifetime, default_provider
+        # configure_general: ssh_key_path, default_lifetime, default_provider, output_format
         # configure_provider(linode): api_key, region, image, type, root_pass
         answers = [
-            "/tmp/key.pub", 30, "linode",
+            "/tmp/key.pub", 30, "linode", "text",
             "TOKEN123", "nl-ams", "linode/ubuntu22.04", "g6-nanode-1", "rootpw",
         ]
         with patch("click.prompt", side_effect=answers):
@@ -28,6 +28,7 @@ class TestRunConfigure(ConfigDirTestCase):
 
         self.assertEqual(general["default_provider"], "linode")
         self.assertEqual(general["default_lifetime_minutes"], 30)
+        self.assertEqual(general["output_format"], "text")
         self.assertEqual(providers["linode"]["api_key"], "TOKEN123")
         self.assertEqual(providers["linode"]["default_region"], "nl-ams")
         self.assertEqual(providers["linode"]["default_root_pass"], "rootpw")

@@ -393,3 +393,31 @@ class AWSProvider(ProviderBase):
     def list_expired_instances(self):
         """List all expired instances."""
         return [inst for inst in self.list_instances() if inst['is_expired']]
+
+    def get_instance_details(self, instance_id):
+        """Fetch the full EC2 instance description for the detail view."""
+        try:
+            response = self.ec2.describe_instances(InstanceIds=[instance_id])
+            for reservation in response.get('Reservations', []):
+                for instance in reservation.get('Instances', []):
+                    return instance
+            return {}
+        except Exception as e:
+            raise Exception(f"Failed to get AWS instance details: {str(e)}")
+
+    def detail_extras(self, raw):
+        placement = raw.get('Placement', {}) or {}
+        sgs = ", ".join(
+            sg.get('GroupName', sg.get('GroupId', '')) for sg in raw.get('SecurityGroups', []) or []
+        )
+        return [
+            ("Instance type", raw.get('InstanceType')),
+            ("Availability zone", placement.get('AvailabilityZone')),
+            ("VPC ID", raw.get('VpcId')),
+            ("Subnet ID", raw.get('SubnetId')),
+            ("Security groups", sgs),
+            ("Private IP", raw.get('PrivateIpAddress')),
+            ("Key name", raw.get('KeyName')),
+            ("Architecture", raw.get('Architecture')),
+            ("Launch time", raw.get('LaunchTime')),
+        ]

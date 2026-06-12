@@ -3,7 +3,7 @@
 Any provider can be validated against the static side of the ProviderBase
 contract by mixing ProviderContractMixin into a unittest.TestCase and setting
 ``provider_cls``. The mixin deliberately does NOT inherit from TestCase, so it is
-never collected on its own — only the concrete subclasses run.
+never collected on its own; only the concrete subclasses run.
 """
 
 from gmab.providers import get_registry

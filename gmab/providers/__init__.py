@@ -8,6 +8,7 @@ from gmab.providers.registry import get_registry, get_available_providers
 from gmab.providers.linode import LinodeProvider
 from gmab.providers.aws import AWSProvider
 from gmab.providers.hetzner import HetznerProvider
+from gmab.providers.ovh import OVHProvider
 
 
 def get_provider(provider_name, provider_cfg):

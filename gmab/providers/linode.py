@@ -237,8 +237,38 @@ class LinodeProvider(ProviderBase):
     def list_expired_instances(self):
         """
         List all expired instances.
-        
+
         Returns:
             list: List of expired instance dictionaries
         """
         return [inst for inst in self.list_instances() if inst['is_expired']]
+
+    def get_instance_details(self, instance_id):
+        """Fetch the full Linode instance object for the detail view."""
+        token = self.provider_cfg.get("api_key")
+        if not token:
+            raise ValueError("Linode API key not found in config.")
+        headers = {"Authorization": f"Bearer {token}"}
+        try:
+            resp = requests.get(
+                f"https://api.linode.com/v4/linode/instances/{instance_id}",
+                headers=headers,
+                timeout=30,
+            )
+            if resp.status_code != 200:
+                raise Exception(f"Failed to get Linode details: {resp.text}")
+            return resp.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Network error when fetching Linode details: {str(e)}")
+
+    def detail_extras(self, raw):
+        specs = raw.get("specs", {}) or {}
+        return [
+            ("Type", raw.get("type")),
+            ("vCPUs", specs.get("vcpus")),
+            ("Memory (MB)", specs.get("memory")),
+            ("Disk (MB)", specs.get("disk")),
+            ("IPv6", raw.get("ipv6")),
+            ("Hypervisor", raw.get("hypervisor")),
+            ("Tags", ", ".join(raw.get("tags", []) or [])),
+        ]

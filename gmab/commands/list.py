@@ -72,3 +72,47 @@ def list_boxes(provider_name=None):
     except Exception as e:
         # Re-raise with a more informative message
         raise Exception(f"Failed to list instances: {str(e)}")
+
+
+def get_detailed_instances(provider_name=None, target=None):
+    """
+    Gather per-instance details for `gmab list detail [verbose]`.
+
+    Args:
+        provider_name (str, optional): Restrict to one provider.
+        target (str, optional): An instance id or label; if given, only that
+            instance is returned, otherwise all matching instances are.
+
+    Returns:
+        list[tuple[dict, dict, list]]: (instance, raw_details, detail_extras) per
+            instance, where `instance` is the standard list dict, `raw_details` is
+            the full provider API payload, and `detail_extras` is the provider's
+            curated (label, value) rows.
+
+    Raises:
+        ConfigNotFoundError: If configuration files don't exist.
+        ValueError: If `target` matches no instance.
+    """
+    instances = list_boxes(provider_name)
+
+    if target:
+        instances = [i for i in instances if target in (i['instance_id'], i['label'])]
+        if not instances:
+            raise ValueError(f"No instance found matching '{target}'.")
+
+    providers_config = load_config("providers.json")
+    results = []
+    for inst in instances:
+        provider_cfg = providers_config.get(inst['provider'])
+        provider = get_provider(inst['provider'], provider_cfg)
+        try:
+            raw = provider.get_instance_details(inst['instance_id'])
+        except Exception as e:
+            raw = {"error": str(e)}
+        try:
+            extras = provider.detail_extras(raw)
+        except Exception:
+            extras = []
+        results.append((inst, raw, extras))
+
+    return results

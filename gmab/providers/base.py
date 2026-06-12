@@ -40,8 +40,8 @@ class ProviderBase(ABC):
 
     Subclasses must set ``name`` (the registry key, e.g. "linode") and
     ``CONFIG_SCHEMA`` (a list of ConfigField), then implement the four instance
-    lifecycle methods. Everything else — defaults, prompts, validation, label
-    generation, SSH key reading, expiry math — is provided here.
+    lifecycle methods. Everything else (defaults, prompts, validation, label
+    generation, SSH key reading, expiry math) is provided here.
     """
 
     # Registry key for this provider, e.g. "linode". Subclasses must override.
@@ -156,6 +156,35 @@ class ProviderBase(ABC):
         default images; providers whose images use a non-root user override this.
         """
         return "root"
+
+    # --- Detail view (gmab list detail / detail verbose) --------------------
+
+    def get_instance_details(self, instance_id):
+        """
+        Return the full provider/API representation of a single instance, used by
+        `gmab list detail [verbose]`. The default falls back to the basic dict
+        from list_instances(); providers override this to fetch the richer
+        single-instance API payload (which `verbose` renders in full).
+
+        Returns:
+            dict: provider-specific instance details (possibly nested).
+        """
+        for instance in self.list_instances():
+            if instance["instance_id"] == str(instance_id):
+                return instance
+        return {}
+
+    def detail_extras(self, raw):
+        """
+        Return provider-specific (label, value) rows for the non-verbose
+        `gmab list detail` view: the handful of fields worth surfacing beyond
+        the common ones (e.g. VPC/subnet for AWS, flavor for OVH). Defaults to
+        none. `raw` is whatever get_instance_details() returned.
+
+        Returns:
+            list[tuple[str, Any]]: ordered (label, value) pairs.
+        """
+        return []
 
     # --- Required provider-specific implementations -------------------------
 

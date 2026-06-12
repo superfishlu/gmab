@@ -42,14 +42,15 @@ def get_instance_provider(instance_identifier, providers_cfg):
 
     return None, None
 
-def terminate_box(instance_id, provider_name=None):
+def terminate_box(instance_id, provider_name=None, quiet=False):
     """
     Terminate an instance by ID or label.
-    
+
     Args:
         instance_id (str): The instance ID or label to terminate
         provider_name (str, optional): The provider name. If None, it will be determined from the instance ID.
-        
+        quiet (bool): Suppress the human-readable confirmation echo (used in JSON mode).
+
     Raises:
         ConfigNotFoundError: If configuration files don't exist
         ValueError: If the provider can't be determined or found
@@ -74,7 +75,8 @@ def terminate_box(instance_id, provider_name=None):
 
         # Terminate the instance
         provider.terminate_instance(instance_id)
-        click.echo(f"Terminated instance '{instance_id}' on '{provider_name}'.")
+        if not quiet:
+            click.echo(f"Terminated instance '{instance_id}' on '{provider_name}'.")
         
     except ConfigNotFoundError:
         # Let the CLI handle this error

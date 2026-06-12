@@ -18,5 +18,15 @@
         "default_region": "nbg1",
         "default_image": "ubuntu-22.04",
         "default_type": "cpx22"
+    },
+    "ovh": {
+        "application_key": "your_ovh_application_key",
+        "application_secret": "your_ovh_application_secret",
+        "consumer_key": "your_ovh_consumer_key",
+        "service_name": "your_public_cloud_project_id",
+        "endpoint": "ovh-eu",
+        "default_region": "GRA9",
+        "default_flavor": "d2-2",
+        "default_image": "Ubuntu 22.04"
     }
 }

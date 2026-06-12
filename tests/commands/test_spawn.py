@@ -55,6 +55,15 @@ class TestSpawnBox(ConfigDirTestCase):
         self.assertIn("ssh ubuntu@", output)
         self.assertNotIn("ssh root@", output)
 
+    def test_json_output_emits_instance(self):
+        import json
+        with patch("gmab.commands.spawn.get_provider", return_value=self.fake), \
+             patch("gmab.utils.output.click.echo") as echo:
+            spawn_box(output="json")
+        payload = json.loads(echo.call_args[0][0])
+        self.assertEqual(payload["instance_id"], "1")
+        self.assertIn("ssh_user", payload)
+
     def test_unconfigured_provider_raises(self):
         with patch("gmab.commands.spawn.get_provider", return_value=self.fake):
             with self.assertRaises(Exception):
