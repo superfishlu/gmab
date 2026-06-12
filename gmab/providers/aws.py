@@ -16,7 +16,10 @@ class AWSProvider(ProviderBase):
         ConfigField("access_key", "Access Key", secret=True, required=True),
         ConfigField("secret_key", "Secret Key", secret=True, required=True),
         ConfigField("default_region", "Default region", default="eu-west-1"),
-        ConfigField("default_image", "Default image", default="ami-0574da719dca65348"),
+        # Ubuntu 22.04 LTS (amd64) in eu-west-1. AMI IDs are region-specific and get
+        # deregistered over time; resolve a current one per region via the SSM param
+        # /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+        ConfigField("default_image", "Default image", default="ami-02ad7d74d71067c63"),
         ConfigField("default_type", "Default instance type", default="t3.micro"),
     ]
 
@@ -214,16 +217,14 @@ class AWSProvider(ProviderBase):
         return creation_time, lifetime_minutes, is_expired
 
     def spawn_instance(self, image=None, region=None, ssh_key_path=None, lifetime_minutes=None):
-        # Use provided region or fall back to default
-        default_region = self.provider_cfg.get("default_region", "us-east-1")
+        # Use provided values or fall back to the configured defaults (mirrors CONFIG_SCHEMA).
+        default_region = self.provider_cfg.get("default_region", "eu-west-1")
         chosen_region = region or default_region
 
-        # Use provided image or fall back to default
-        default_image = self.provider_cfg.get("default_image", "ami-0574da719dca65348")
+        default_image = self.provider_cfg.get("default_image", "ami-02ad7d74d71067c63")
         chosen_image = image or default_image
 
-        # Get instance type from config or use default
-        instance_type = self.provider_cfg.get("default_type", "t2.micro")
+        instance_type = self.provider_cfg.get("default_type", "t3.micro")
 
         # Generate a unique name tag
         instance_name = make_label()

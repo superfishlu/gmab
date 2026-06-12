@@ -10,7 +10,7 @@
         "access_key": "your_aws_access_key",
         "secret_key": "your_aws_secret_key",
         "default_region": "eu-west-1",
-        "default_image": "ami-0574da719dca65348",
+        "default_image": "ami-02ad7d74d71067c63",
         "default_type": "t3.micro"
     },
     "hetzner": {
