@@ -113,7 +113,14 @@ gmab terminate all
 
 # Terminate expired instances
 gmab terminate expired
+
+# Skip the y/n confirmation (useful for automation/cron)
+gmab terminate my-instance-label -y
+gmab terminate expired -y
 ```
+`gmab terminate` asks for a y/n confirmation before terminating anything (a single instance,
+multiple, `all`, or `expired`). Pass `-y`/`--yes` to skip the prompt.
+
 ### Version Information
 
 You can check the installed version of GMAB using the `-v` or `--version` flag:

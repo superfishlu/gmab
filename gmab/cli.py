@@ -60,9 +60,10 @@ def spawn(provider, region, image, lifetime):
 @click.option('--provider', '-p', default=None, help='Provider name (default from config).')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt.')
 def terminate(instance_ids, provider, yes):
-    """ Terminate one or more instances by ID or label. 
-    
+    """ Terminate one or more instances by ID or label.
+
     Use 'all' to terminate all instances, or 'expired' to terminate expired instances.
+    Asks for y/n confirmation in every case; pass -y/--yes to skip the prompt.
     """
     if not check_config_exists():
         return

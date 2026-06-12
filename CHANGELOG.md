@@ -11,6 +11,10 @@ All notable changes to GMAB will be documented in this file.
   `CONFIG_SCHEMA`; the base class now derives defaults, prompts, validation, and secret masking.
 - Hoisted shared logic (SSH key reading, label generation, expiry math, label-to-id lookup)
   into `ProviderBase` and `gmab/utils/naming.py`.
+- `gmab terminate` now asks for y/n confirmation in every case, including a single instance
+  (which previously skipped the prompt). Pass `-y`/`--yes` to bypass it.
+- The post-spawn "Connect via" SSH hint now shows the correct login user per provider
+  (`ubuntu` for the default AWS image, `root` for Linode/Hetzner) instead of always `root`.
 
 ### Added
 - `gmab/providers/_template.py` reference implementation and an "Adding a provider" guide.
@@ -19,7 +23,12 @@ All notable changes to GMAB will be documented in this file.
 
 ### Fixed
 - Provider config defaults handed Hetzner AWS's defaults.
-- `__version__` was left at 0.1.3 in the 0.1.4 release.
+- Updated the AWS default AMI (the previous one had been deregistered) to a current
+  Ubuntu 22.04 LTS image for eu-west-1.
+- Updated the Hetzner default server type from `cpx11` (now US-only) to `cpx22`, which is
+  available in the default `nbg1` location.
+- `__version__` was left at 0.1.3 in the 0.1.4 release, so `gmab --version` reported the
+  wrong number.
 
 ## [0.1.4] - 2026-01-20
 ### Changed
