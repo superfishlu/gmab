@@ -165,10 +165,11 @@ def terminate(instance_ids, provider, yes):
             click.echo("Error: Cannot terminate more than 5 instances at once.")
             return
 
-        if len(instance_ids) > 1 and not yes:
-            # Ask for confirmation when terminating multiple instances
+        if not yes:
+            # Ask for confirmation before terminating (single or multiple)
             instances_str = "', '".join(instance_ids)
-            if not click.confirm(f"Are you sure you want to terminate instances: '{instances_str}'?"):
+            noun = "instance" if len(instance_ids) == 1 else "instances"
+            if not click.confirm(f"Are you sure you want to terminate {noun}: '{instances_str}'?"):
                 click.echo("Operation cancelled.")
                 return
 
